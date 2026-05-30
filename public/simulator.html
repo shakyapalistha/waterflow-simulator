@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IFC PS E-Flow Compliance Simulator — Nepal Hydropower</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #1c2128;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #484f58;
+    --green: #3fb950;
+    --green-bg: rgba(63,185,80,0.12);
+    --yellow: #d29922;
+    --yellow-bg: rgba(210,153,34,0.12);
+    --red: #f85149;
+    --red-bg: rgba(248,81,73,0.12);
+    --blue: #58a6ff;
+    --blue-bg: rgba(88,166,255,0.12);
+    --teal: #39d353;
+    --font: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 14px; }
+
+  .header-logo {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #3fb950, #58a6ff);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .header-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .header-sub { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+
+  .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .pill {
+    font-size: 11px; font-weight: 500;
+    padding: 3px 10px; border-radius: 20px;
+    font-family: var(--mono);
+    border: 1px solid;
+  }
+  .pill-red { background: var(--red-bg); color: var(--red); border-color: rgba(248,81,73,0.3); }
+  .pill-yellow { background: var(--yellow-bg); color: var(--yellow); border-color: rgba(210,153,34,0.3); }
+  .pill-green { background: var(--green-bg); color: var(--green); border-color: rgba(63,185,80,0.3); }
+
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.5s infinite;
+    display: inline-block; margin-right: 5px;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── Layout ── */
+  .container { max-width: 1280px; margin: 0 auto; padding: 20px 24px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+
+  @media (max-width: 900px) {
+    .grid-2, .grid-3, .grid-4, .grid-5 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 560px) {
+    .grid-2, .grid-3, .grid-4, .grid-5 { grid-template-columns: 1fr; }
+    .container { padding: 12px 14px; }
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
+  .card-title {
+    font-size: 11px; font-weight: 500; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 0.07em;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* ── Metric cards ── */
+  .metric-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    position: relative;
+    transition: border-color 0.3s;
+  }
+  .metric-card.ok { border-left: 3px solid var(--green); }
+  .metric-card.warn { border-left: 3px solid var(--yellow); }
+  .metric-card.crit { border-left: 3px solid var(--red); }
+
+  .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; font-family: var(--mono); }
+  .metric-value {
+    font-size: 26px; font-weight: 600; color: var(--text);
+    font-family: var(--mono); line-height: 1;
+  }
+  .metric-value .unit { font-size: 13px; font-weight: 400; color: var(--text2); }
+  .metric-threshold { font-size: 10px; color: var(--text3); margin-top: 4px; }
+
+  /* ── Big gauge ── */
+  .gauge-wrap {
+    display: flex; align-items: center; gap: 20px;
+    padding: 18px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .gauge-canvas-wrap { flex: 0 0 160px; }
+  .gauge-info { flex: 1; min-width: 160px; }
+  .gauge-big { font-size: 40px; font-weight: 600; font-family: var(--mono); }
+  .gauge-ok { color: var(--green); }
+  .gauge-warn { color: var(--yellow); }
+  .gauge-crit { color: var(--red); }
+  .gauge-label { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .gauge-status { margin-top: 8px; }
+
+  /* ── Status badge ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 500;
+    padding: 3px 9px; border-radius: 20px;
+    font-family: var(--mono); border: 1px solid;
+  }
+  .badge-ok { background: var(--green-bg); color: var(--green); border-color: rgba(63,185,80,0.3); }
+  .badge-warn { background: var(--yellow-bg); color: var(--yellow); border-color: rgba(210,153,34,0.3); }
+  .badge-crit { background: var(--red-bg); color: var(--red); border-color: rgba(248,81,73,0.3); }
+  .badge-info { background: var(--blue-bg); color: var(--blue); border-color: rgba(88,166,255,0.3); }
+
+  /* ── Sliders / controls ── */
+  .controls-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+
+  .ctrl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+
+  .ctrl-item label {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--text2);
+    margin-bottom: 6px; font-family: var(--mono);
+  }
+  .ctrl-item label span { color: var(--blue); font-weight: 500; }
+
+  input[type=range] {
+    width: 100%; height: 4px;
+    -webkit-appearance: none;
+    background: var(--border2);
+    border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--blue); cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--blue); cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+
+  select {
+    background: var(--bg3); color: var(--text);
+    border: 1px solid var(--border2);
+    border-radius: 6px; padding: 6px 10px;
+    font-size: 12px; font-family: var(--mono);
+    cursor: pointer; outline: none; width: 100%;
+  }
+
+  /* ── Alert list ── */
+  .alert-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    margin-bottom: 8px; font-size: 12px;
+    transition: all 0.3s;
+  }
+  .alert-item.warn { background: var(--yellow-bg); border-color: rgba(210,153,34,0.3); }
+  .alert-item.crit { background: var(--red-bg); border-color: rgba(248,81,73,0.3); }
+  .alert-item.ok { background: var(--green-bg); border-color: rgba(63,185,80,0.3); }
+  .alert-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+  .alert-title { font-weight: 500; color: var(--text); }
+  .alert-sub { font-size: 11px; color: var(--text2); margin-top: 2px; font-family: var(--mono); }
+
+  /* ── IFC PS table ── */
+  .ps-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .ps-table th {
+    text-align: left; padding: 8px 12px;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--text3); border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+  }
+  .ps-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .ps-table tr:last-child td { border-bottom: none; }
+  .ps-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .ps-tag {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 4px;
+    font-family: var(--mono); white-space: nowrap;
+    display: inline-block;
+  }
+  .ps-tag-crit { background: var(--red-bg); color: var(--red); }
+  .ps-tag-high { background: var(--yellow-bg); color: var(--yellow); }
+  .ps-tag-mod { background: var(--green-bg); color: var(--green); }
+
+  /* ── Scenario buttons ── */
+  .scenario-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
+
+  .scenario-btn {
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 8px; padding: 12px 14px;
+    cursor: pointer; text-align: left;
+    transition: all 0.2s; color: var(--text);
+    font-family: var(--font);
+  }
+  .scenario-btn:hover { border-color: var(--blue); background: var(--blue-bg); }
+  .scenario-btn.active { border-color: var(--blue); background: var(--blue-bg); }
+  .scenario-btn .s-name { font-size: 12px; font-weight: 500; }
+  .scenario-btn .s-desc { font-size: 10px; color: var(--text2); margin-top: 3px; font-family: var(--mono); }
+
+  /* ── Log table ── */
+  .log-wrap { overflow-x: auto; }
+  .log-table { width: 100%; border-collapse: collapse; font-size: 11px; font-family: var(--mono); min-width: 560px; }
+  .log-table th {
+    text-align: left; padding: 7px 10px;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text3); border-bottom: 1px solid var(--border);
+  }
+  .log-table td { padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--text2); }
+  .log-table .td-ok { color: var(--green); }
+  .log-table .td-warn { color: var(--yellow); }
+  .log-table .td-crit { color: var(--red); }
+
+  /* ── Progress bars ── */
+  .pbar-wrap { margin-bottom: 10px; }
+  .pbar-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); margin-bottom: 4px; font-family: var(--mono); }
+  .pbar-track { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .pbar-fill { height: 100%; border-radius: 3px; transition: width 0.5s, background 0.5s; }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 14px 24px;
+    font-size: 11px; color: var(--text3);
+    font-family: var(--mono);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    margin-top: 20px;
+  }
+
+  /* ── Section heading ── */
+  .sec-head {
+    font-size: 11px; font-weight: 500; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 0.07em;
+    margin: 20px 0 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .sec-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Sim speed ── */
+  .speed-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .speed-row label { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+  .speed-btn {
+    font-size: 11px; padding: 4px 10px;
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 4px; cursor: pointer; color: var(--text);
+    font-family: var(--mono); transition: all 0.15s;
+  }
+  .speed-btn:hover { background: var(--blue-bg); border-color: var(--blue); }
+  .speed-btn.active { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+
+  .export-btn {
+    background: var(--green-bg); border: 1px solid rgba(63,185,80,0.4);
+    color: var(--green); border-radius: 6px; padding: 7px 14px;
+    font-size: 12px; font-family: var(--mono); cursor: pointer;
+    transition: all 0.2s;
+  }
+  .export-btn:hover { background: rgba(63,185,80,0.2); }
+
+  /* chart canvas wrapper */
+  .chart-wrap { position: relative; width: 100%; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="header-logo">💧</div>
+    <div>
+      <div class="header-title">IFC PS E-Flow Compliance Simulator</div>
+      <div class="header-sub">Nepal Hydropower · PS4 / PS6 / PS8 · v1.0</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="pill pill-red">PS4 CRITICAL gap</span>
+    <span class="pill pill-yellow">PS6 HIGH gap</span>
+    <span class="pill pill-green">PS8 MOD gap</span>
+    <span style="font-size:12px;color:var(--text2);font-family:var(--mono)">
+      <span class="live-dot"></span><span id="simStatus">Simulating...</span>
+    </span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- SCENARIO SELECTOR -->
+  <div class="sec-head">Simulation scenarios</div>
+  <div class="scenario-grid" id="scenarioBtns">
+    <button class="scenario-btn active" data-scenario="normal" onclick="applyScenario(this)">
+      <div class="s-name">✅ Normal operation</div>
+      <div class="s-desc">All flows within IFC thresholds</div>
+    </button>
+    <button class="scenario-btn" data-scenario="drought" onclick="applyScenario(this)">
+      <div class="s-name">🌵 Dry season drought</div>
+      <div class="s-desc">Low inflow, e-flow at risk</div>
+    </button>
+    <button class="scenario-btn" data-scenario="flood" onclick="applyScenario(this)">
+      <div class="s-name">🌊 Monsoon flood</div>
+      <div class="s-desc">High turbidity, sediment spike</div>
+    </button>
+    <button class="scenario-btn" data-scenario="violation" onclick="applyScenario(this)">
+      <div class="s-name">🚨 PS4 violation</div>
+      <div class="s-desc">E-flow below 10% minimum</div>
+    </button>
+    <button class="scenario-btn" data-scenario="glof" onclick="applyScenario(this)">
+      <div class="s-name">⚠️ GLOF event</div>
+      <div class="s-desc">Glacial outburst simulation</div>
+    </button>
+  </div>
+
+  <!-- SIMULATOR CONTROLS -->
+  <div class="controls-section">
+    <div class="card-title">⚙ Sensor input parameters (simulated)</div>
+    <div class="ctrl-grid">
+      <div class="ctrl-item">
+        <label>Total intake flow (L/s) <span id="lTotal">400</span></label>
+        <input type="range" id="sTotal" min="50" max="2000" step="1" value="400" oninput="updateSim()">
+      </div>
+      <div class="ctrl-item">
+        <label>E-flow diverted (L/s) <span id="lBio">44</span></label>
+        <input type="range" id="sBio" min="0" max="300" step="1" value="44" oninput="updateSim()">
+      </div>
+      <div class="ctrl-item">
+        <label>Water temperature (°C) <span id="lTemp">14.0</span></label>
+        <input type="range" id="sTemp" min="2" max="35" step="0.1" value="14" oninput="updateSim()">
+      </div>
+      <div class="ctrl-item">
+        <label>Turbidity (NTU) <span id="lTurb">18</span></label>
+        <input type="range" id="sTurb" min="0" max="200" step="1" value="18" oninput="updateSim()">
+      </div>
+      <div class="ctrl-item">
+        <label>Dissolved O₂ (mg/L) <span id="lDO">7.4</span></label>
+        <input type="range" id="sDO" min="1" max="14" step="0.1" value="7.4" oninput="updateSim()">
+      </div>
+      <div class="ctrl-item">
+        <label>pH level <span id="lPH">7.2</span></label>
+        <input type="range" id="sPH" min="5" max="10" step="0.1" value="7.2" oninput="updateSim()">
+      </div>
+      <div class="ctrl-item">
+        <label>Fish passage velocity (m/s) <span id="lFish">0.92</span></label>
+        <input type="range" id="sFish" min="0.1" max="3" step="0.01" value="0.92" oninput="updateSim()">
+      </div>
+      <div class="ctrl-item">
+        <label>Sediment load (%) <span id="lSed">22</span></label>
+        <input type="range" id="sSed" min="0" max="80" step="1" value="22" oninput="updateSim()">
+      </div>
+    </div>
+    <div class="speed-row">
+      <label>Sim auto-noise:</label>
+      <button class="speed-btn active" id="spd-off" onclick="setNoise(false,this)">Off</button>
+      <button class="speed-btn" id="spd-on" onclick="setNoise(true,this)">On (±5% fluctuation)</button>
+    </div>
+  </div>
+
+  <!-- GAUGE + STATUS -->
+  <div class="gauge-wrap">
+    <div class="gauge-canvas-wrap">
+      <canvas id="gaugeCanvas" width="160" height="100" role="img" aria-label="E-flow compliance gauge"></canvas>
+    </div>
+    <div class="gauge-info">
+      <div class="gauge-big" id="gaugePct">11.0%</div>
+      <div class="gauge-label">E-flow / Total intake ratio</div>
+      <div class="gauge-status" id="gaugeStatus"></div>
+      <div style="font-size:11px;color:var(--text2);margin-top:8px;font-family:var(--mono)" id="gaugeSurplus">
+        Surplus above IFC PS4 minimum: +1.0%
+      </div>
+    </div>
+    <div style="flex:1;min-width:200px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-family:var(--mono)">Compliance progress</div>
+      <div class="pbar-wrap">
+        <div class="pbar-label"><span>E-flow ratio</span><span id="pb-eflow-v">11.0%</span></div>
+        <div class="pbar-track"><div class="pbar-fill" id="pb-eflow" style="width:55%;background:#3fb950"></div></div>
+      </div>
+      <div class="pbar-wrap">
+        <div class="pbar-label"><span>Dissolved O₂</span><span id="pb-do-v">7.4 mg/L</span></div>
+        <div class="pbar-track"><div class="pbar-fill" id="pb-do" style="width:74%;background:#3fb950"></div></div>
+      </div>
+      <div class="pbar-wrap">
+        <div class="pbar-label"><span>Turbidity (inv.)</span><span id="pb-turb-v">18 NTU</span></div>
+        <div class="pbar-track"><div class="pbar-fill" id="pb-turb" style="width:82%;background:#3fb950"></div></div>
+      </div>
+      <div class="pbar-wrap">
+        <div class="pbar-label"><span>Fish passage</span><span id="pb-fish-v">0.92 m/s</span></div>
+        <div class="pbar-track"><div class="pbar-fill" id="pb-fish" style="width:61%;background:#3fb950"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- METRIC CARDS -->
+  <div class="sec-head">PS4 — Community H&S &amp; e-flow sensors</div>
+  <div class="grid-4">
+    <div class="metric-card ok" id="mc-ratio">
+      <div class="metric-label">E-flow ratio</div>
+      <div class="metric-value" id="mv-ratio">11.0<span class="unit">%</span></div>
+      <div class="metric-threshold">IFC PS4 min: 10%</div>
+    </div>
+    <div class="metric-card ok" id="mc-down">
+      <div class="metric-label">Downstream flow</div>
+      <div class="metric-value" id="mv-down">44<span class="unit"> L/s</span></div>
+      <div class="metric-threshold">GLOF buffer active</div>
+    </div>
+    <div class="metric-card ok" id="mc-temp">
+      <div class="metric-label">Water temperature</div>
+      <div class="metric-value" id="mv-temp">14.0<span class="unit">°C</span></div>
+      <div class="metric-threshold">Range: 8–22°C</div>
+    </div>
+    <div class="metric-card ok" id="mc-turb">
+      <div class="metric-label">Turbidity</div>
+      <div class="metric-value" id="mv-turb">18<span class="unit"> NTU</span></div>
+      <div class="metric-threshold">Limit: &lt;50 NTU</div>
+    </div>
+  </div>
+
+  <div class="sec-head">PS6 — Biodiversity &amp; ecosystem sensors</div>
+  <div class="grid-4">
+    <div class="metric-card ok" id="mc-fish">
+      <div class="metric-label">Fish passage vel.</div>
+      <div class="metric-value" id="mv-fish">0.92<span class="unit"> m/s</span></div>
+      <div class="metric-threshold">Max: 1.5 m/s</div>
+    </div>
+    <div class="metric-card ok" id="mc-do">
+      <div class="metric-label">Dissolved O₂</div>
+      <div class="metric-value" id="mv-do">7.4<span class="unit"> mg/L</span></div>
+      <div class="metric-threshold">Min IFC: 5.0 mg/L</div>
+    </div>
+    <div class="metric-card ok" id="mc-ph">
+      <div class="metric-label">pH level</div>
+      <div class="metric-value" id="mv-ph">7.2<span class="unit"></span></div>
+      <div class="metric-threshold">Range: 6.5–8.5</div>
+    </div>
+    <div class="metric-card ok" id="mc-sed">
+      <div class="metric-label">Sediment load</div>
+      <div class="metric-value" id="mv-sed">22<span class="unit">%</span></div>
+      <div class="metric-threshold">Ref: Kulekhani 25%</div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="sec-head">24-hour trend charts</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">📈 E-flow ratio vs PS4 threshold</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="chart1" role="img" aria-label="24h e-flow ratio trend vs 10% PS4 threshold">E-flow ratio over 24 hours.</canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📈 Dissolved O₂ &amp; turbidity</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="chart2" role="img" aria-label="24h dissolved oxygen and turbidity trend">DO and turbidity over 24 hours.</canvas>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">📈 Fish passage velocity</div>
+      <div class="chart-wrap" style="height:160px">
+        <canvas id="chart3" role="img" aria-label="24h fish passage velocity trend">Fish passage velocity over 24 hours.</canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📈 Sediment load (%)</div>
+      <div class="chart-wrap" style="height:160px">
+        <canvas id="chart4" role="img" aria-label="24h sediment load trend">Sediment load over 24 hours.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- IFC PS COMPLIANCE TABLE -->
+  <div class="sec-head">IFC PS compliance matrix</div>
+  <div class="card" style="overflow-x:auto">
+    <table class="ps-table">
+      <thead>
+        <tr>
+          <th>PS</th>
+          <th>Standard</th>
+          <th>IFC requirement</th>
+          <th>Sensor parameter</th>
+          <th>Current value</th>
+          <th>Nepal gap</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="ps-tag ps-tag-crit">PS4</span></td>
+          <td>Community H&amp;S</td>
+          <td>E-flow monitoring ≥10% of total</td>
+          <td>Flow meter ratio</td>
+          <td id="ct-eflow">11.0%</td>
+          <td><span class="ps-tag ps-tag-crit">CRITICAL</span></td>
+          <td><span class="badge badge-ok" id="cb-eflow">✓ OK</span></td>
+        </tr>
+        <tr>
+          <td><span class="ps-tag ps-tag-crit">PS4</span></td>
+          <td>Community H&amp;S</td>
+          <td>No GLOF integration required</td>
+          <td>Downstream Q &amp; surge detection</td>
+          <td id="ct-down">44 L/s</td>
+          <td><span class="ps-tag ps-tag-crit">CRITICAL</span></td>
+          <td><span class="badge badge-ok" id="cb-down">✓ OK</span></td>
+        </tr>
+        <tr>
+          <td><span class="ps-tag ps-tag-high">PS6</span></td>
+          <td>Biodiversity</td>
+          <td>Fish passage unimpeded (&lt;1.5 m/s)</td>
+          <td>Velocity sensor</td>
+          <td id="ct-fish">0.92 m/s</td>
+          <td><span class="ps-tag ps-tag-high">HIGH</span></td>
+          <td><span class="badge badge-ok" id="cb-fish">✓ OK</span></td>
+        </tr>
+        <tr>
+          <td><span class="ps-tag ps-tag-high">PS6</span></td>
+          <td>Biodiversity</td>
+          <td>Dissolved O₂ ≥5 mg/L for aquatic life</td>
+          <td>DO probe</td>
+          <td id="ct-do">7.4 mg/L</td>
+          <td><span class="ps-tag ps-tag-high">HIGH</span></td>
+          <td><span class="badge badge-ok" id="cb-do">✓ OK</span></td>
+        </tr>
+        <tr>
+          <td><span class="ps-tag ps-tag-high">PS6</span></td>
+          <td>Biodiversity</td>
+          <td>Sediment mgmt (ref: Kulekhani 25%)</td>
+          <td>Turbidity + sediment sensor</td>
+          <td id="ct-sed">22%</td>
+          <td><span class="ps-tag ps-tag-high">HIGH</span></td>
+          <td><span class="badge badge-ok" id="cb-sed">✓ OK</span></td>
+        </tr>
+        <tr>
+          <td><span class="ps-tag ps-tag-mod">PS8</span></td>
+          <td>Cultural heritage</td>
+          <td>Sacred river flow continuity</td>
+          <td>pH + temperature + flow</td>
+          <td id="ct-ph">7.2 / 14°C</td>
+          <td><span class="ps-tag ps-tag-mod">MOD</span></td>
+          <td><span class="badge badge-ok" id="cb-ph">✓ OK</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ALERTS -->
+  <div class="sec-head">Active alerts &amp; event log</div>
+  <div id="alertBox"></div>
+
+  <!-- DATA LOG -->
+  <div class="sec-head">Sensor data log — last 12 readings</div>
+  <div class="card log-wrap">
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Total (L/s)</th>
+          <th>E-flow (L/s)</th>
+          <th>Ratio %</th>
+          <th>Temp °C</th>
+          <th>NTU</th>
+          <th>DO mg/L</th>
+          <th>pH</th>
+          <th>Vel m/s</th>
+          <th>Sed %</th>
+          <th>PS4</th>
+          <th>PS6</th>
+        </tr>
+      </thead>
+      <tbody id="logBody"></tbody>
+    </table>
+  </div>
+
+  <!-- EXPORT -->
+  <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+    <button class="export-btn" onclick="exportCSV()">⬇ Export CSV log</button>
+    <button class="export-btn" style="background:var(--blue-bg);border-color:rgba(88,166,255,0.4);color:var(--blue)" onclick="exportJSON()">⬇ Export JSON</button>
+    <button class="export-btn" style="background:var(--yellow-bg);border-color:rgba(210,153,34,0.4);color:var(--yellow)" onclick="printReport()">🖨 Print compliance report</button>
+  </div>
+
+</div>
+
+<footer>
+  <span>IFC Performance Standards PS4 · PS6 · PS8 — Nepal Hydropower E-Flow Simulator</span>
+  <span>Simulated data only · Not for regulatory submission · v1.0</span>
+</footer>
+
+<script>
+/* ════════════════════════════════════════
+   STATE
+════════════════════════════════════════ */
+let noiseOn = false;
+let noiseInterval = null;
+let charts = {};
+let logEntries = [];
+let tickCount = 0;
+
+const SCENARIOS = {
+  normal:    { total:400, bio:44, temp:14, turb:18, do_:7.4, ph:7.2, fish:0.92, sed:22 },
+  drought:   { total:80,  bio:6,  temp:22, turb:35, do_:5.8, ph:7.0, fish:0.7, sed:18 },
+  flood:     { total:1800,bio:200,temp:9,  turb:160,do_:6.1, ph:7.4, fish:2.2, sed:65 },
+  violation: { total:400, bio:30, temp:14, turb:20, do_:7.2, ph:7.1, fish:0.9, sed:24 },
+  glof:      { total:1200,bio:50, temp:5,  turb:120,do_:4.2, ph:6.4, fish:2.8, sed:70 }
+};
+
+/* ════════════════════════════════════════
+   HISTORY DATA
+════════════════════════════════════════ */
+function genHistory(tf, bf, tempV, turbV, doV, fishV, sedV) {
+  const arr = [];
+  for (let i = 23; i >= 0; i--) {
+    const n = (v, pct) => parseFloat((v * (1 + (Math.random()-0.5)*pct)).toFixed(2));
+    arr.push({
+      ratio: parseFloat((n(bf,0.3)/n(tf,0.1)*100).toFixed(1)),
+      do_:   parseFloat(n(doV,0.15).toFixed(1)),
+      turb:  Math.round(n(turbV,0.3)),
+      fish:  parseFloat(n(fishV,0.2).toFixed(2)),
+      sed:   Math.round(n(sedV,0.2)),
+      label: i === 0 ? 'now' : (i < 10 ? '-' + i + 'h' : '-' + i + 'h')
+    });
+  }
+  return arr;
+}
+
+/* ════════════════════════════════════════
+   GAUGE CANVAS
+════════════════════════════════════════ */
+function drawGauge(ratio) {
+  const canvas = document.getElementById('gaugeCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 160, 100);
+
+  const cx = 80, cy = 90, r = 70;
+  const startA = Math.PI, endA = 2 * Math.PI;
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, startA, endA);
+  ctx.strokeStyle = '#1c2128';
+  ctx.lineWidth = 14;
+  ctx.stroke();
+
+  const clamp = Math.min(Math.max(ratio, 0), 20);
+  const fillEnd = startA + (clamp / 20) * Math.PI;
+  const color = ratio < 8 ? '#f85149' : ratio < 10 ? '#d29922' : '#3fb950';
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, startA, fillEnd);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // needle
+  const needleA = startA + (clamp / 20) * Math.PI;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + (r - 20) * Math.cos(needleA), cy + (r - 20) * Math.sin(needleA));
+  ctx.strokeStyle = '#e6edf3';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 5, 0, 2 * Math.PI);
+  ctx.fillStyle = '#e6edf3';
+  ctx.fill();
+
+  // labels
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px IBM Plex Mono, monospace';
+  ctx.fillText('0%', 8, 96);
+  ctx.fillText('10%', 66, 16);
+  ctx.fillText('20%', 126, 96);
+}
+
+/* ════════════════════════════════════════
+   BUILD / UPDATE CHARTS
+════════════════════════════════════════ */
+function buildCharts(hist) {
+  const gridColor = 'rgba(255,255,255,0.05)';
+  const tickColor = '#484f58';
+  const opts = (yLabel, min, max) => ({
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: tickColor, font: { size: 10, family: 'IBM Plex Mono' } }, grid: { color: gridColor } },
+      y: { min, max, title: { display: true, text: yLabel, color: tickColor, font: { size: 10 } }, ticks: { color: tickColor, font: { size: 10, family: 'IBM Plex Mono' } }, grid: { color: gridColor } }
+    }
+  });
+
+  if (charts.c1) charts.c1.destroy();
+  if (charts.c2) charts.c2.destroy();
+  if (charts.c3) charts.c3.destroy();
+  if (charts.c4) charts.c4.destroy();
+
+  const labels = hist.map(h => h.label);
+
+  charts.c1 = new Chart(document.getElementById('chart1').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'E-flow %', data: hist.map(h => h.ratio), borderColor: '#3fb950', borderWidth: 2, pointRadius: 2, tension: 0.4, fill: false },
+        { label: 'PS4 min', data: hist.map(() => 10), borderColor: '#f85149', borderWidth: 1.5, borderDash: [5,4], pointRadius: 0, fill: false }
+      ]
+    },
+    options: { ...opts('E-flow %', 0, 25), plugins: { legend: { display: false } } }
+  });
+
+  charts.c2 = new Chart(document.getElementById('chart2').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'DO mg/L', data: hist.map(h => h.do_), borderColor: '#58a6ff', borderWidth: 2, pointRadius: 2, tension: 0.4, fill: false, yAxisID: 'y' },
+        { label: 'Turbidity NTU', data: hist.map(h => h.turb), borderColor: '#d29922', borderWidth: 2, pointRadius: 2, tension: 0.4, fill: false, borderDash: [4,3], yAxisID: 'y2' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: tickColor, font: { size: 10, family: 'IBM Plex Mono' } }, grid: { color: gridColor } },
+        y: { position: 'left', title: { display: true, text: 'DO mg/L', color: tickColor, font: { size: 10 } }, ticks: { color: tickColor, font: { size: 10, family: 'IBM Plex Mono' } }, grid: { color: gridColor } },
+        y2: { position: 'right', title: { display: true, text: 'NTU', color: tickColor, font: { size: 10 } }, ticks: { color: tickColor, font: { size: 10, family: 'IBM Plex Mono' } }, grid: { display: false } }
+      }
+    }
+  });
+
+  charts.c3 = new Chart(document.getElementById('chart3').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Vel m/s', data: hist.map(h => h.fish), borderColor: '#39d353', borderWidth: 2, pointRadius: 2, tension: 0.4, fill: false },
+        { label: 'Max', data: hist.map(() => 1.5), borderColor: '#f85149', borderWidth: 1.5, borderDash: [5,4], pointRadius: 0, fill: false }
+      ]
+    },
+    options: { ...opts('m/s', 0, 3), plugins: { legend: { display: false } } }
+  });
+
+  charts.c4 = new Chart(document.getElementById('chart4').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Sediment %', data: hist.map(h => h.sed), backgroundColor: hist.map(h => h.sed > 25 ? '#f8514955' : '#d2992244'), borderColor: hist.map(h => h.sed > 25 ? '#f85149' : '#d29922'), borderWidth: 1 }
+      ]
+    },
+    options: { ...opts('%', 0, 80), plugins: { legend: { display: false } } }
+  });
+}
+
+/* ════════════════════════════════════════
+   STATUS HELPERS
+════════════════════════════════════════ */
+function setCard(id, cls) {
+  document.getElementById(id).className = 'metric-card ' + cls;
+}
+function setVal(id, html) {
+  document.getElementById(id).innerHTML = html;
+}
+function setBadge(id, ok, warn) {
+  const el = document.getElementById(id);
+  if (ok)   { el.className = 'badge badge-ok';   el.textContent = '✓ OK'; }
+  else if (warn) { el.className = 'badge badge-warn'; el.textContent = '⚠ Watch'; }
+  else      { el.className = 'badge badge-crit'; el.textContent = '✗ Violation'; }
+}
+function pbar(id, valId, pct, color, label) {
+  document.getElementById(id).style.width = Math.min(100, pct).toFixed(0) + '%';
+  document.getElementById(id).style.background = color;
+  document.getElementById(valId).textContent = label;
+}
+
+/* ════════════════════════════════════════
+   ALERTS
+════════════════════════════════════════ */
+function buildAlerts(state) {
+  const box = document.getElementById('alertBox');
+  const items = [];
+  const now = new Date().toLocaleTimeString();
+
+  if (state.ratio < 10) items.push({ cls:'crit', icon:'🚨', title:'PS4 VIOLATION — E-flow below 10% IFC minimum', sub:'Incident log required · ESMS notification · ' + now });
+  else if (state.ratio < 12) items.push({ cls:'warn', icon:'⚠️', title:'PS4 watch — E-flow within 2% of minimum threshold', sub:'Monitor closely · PS4 Community H&S · ' + now });
+
+  if (state.fish > 1.5) items.push({ cls:'crit', icon:'🐟', title:'PS6 VIOLATION — Fish passage velocity exceeds 1.5 m/s', sub:'Aquatic habitat at risk · Cumulative basin assessment required · ' + now });
+
+  if (state.do_ < 5) items.push({ cls:'crit', icon:'💧', title:'PS6 VIOLATION — Dissolved oxygen below 5 mg/L', sub:'Aquatic life at immediate risk · IFC PS6 threshold · ' + now });
+  else if (state.do_ < 6) items.push({ cls:'warn', icon:'💧', title:'PS6 watch — Dissolved oxygen low (< 6 mg/L)', sub:'Monitor DO levels · PS6 Biodiversity · ' + now });
+
+  if (state.turb > 50) items.push({ cls:'crit', icon:'🌊', title:'Turbidity exceeds 50 NTU — construction/sediment event likely', sub:'PS6 resource efficiency concern · ' + now });
+  else if (state.turb > 35) items.push({ cls:'warn', icon:'🌊', title:'Turbidity elevated (> 35 NTU)', sub:'Approaching PS6 threshold · Monitor sediment · ' + now });
+
+  if (state.sed > 25) items.push({ cls:'warn', icon:'🪨', title:'Sediment load above Kulekhani 25% reference baseline', sub:'PS6 capacity loss risk — ref: Kulekhani plant · ' + now });
+
+  if (state.ph < 6.5 || state.ph > 8.5) items.push({ cls:'crit', icon:'⚗️', title:'pH outside 6.5–8.5 range — aquatic ecosystem impact', sub:'PS6 / PS8 sacred river flow concern · ' + now });
+
+  if (state.temp > 22) items.push({ cls:'warn', icon:'🌡️', title:'Water temperature above 22°C — thermal stress risk', sub:'PS6 biodiversity · Dissolved O₂ depletion risk · ' + now });
+
+  if (items.length === 0) items.push({ cls:'ok', icon:'✅', title:'All IFC PS4 / PS6 / PS8 parameters within thresholds', sub:'System nominal · ' + now });
+
+  box.innerHTML = items.map(i =>
+    `<div class="alert-item ${i.cls}">
+      <span class="alert-icon">${i.icon}</span>
+      <div><div class="alert-title">${i.title}</div><div class="alert-sub">${i.sub}</div></div>
+    </div>`
+  ).join('');
+}
+
+/* ════════════════════════════════════════
+   LOG
+════════════════════════════════════════ */
+function addLog(state) {
+  const now = new Date();
+  const ts = now.toLocaleTimeString();
+  const ps4 = state.ratio >= 10 ? 'OK' : 'VIOLATION';
+  const ps6 = (state.do_ >= 5 && state.fish <= 1.5 && state.turb <= 50) ? 'OK' : (state.do_ >= 5 && state.fish <= 1.5 ? 'WATCH' : 'VIOLATION');
+
+  logEntries.unshift({ ts, total: Math.round(state.tf), bio: Math.round(state.bf), ratio: state.ratio.toFixed(1), temp: state.temp.toFixed(1), turb: Math.round(state.turb), do_: state.do_.toFixed(1), ph: state.ph.toFixed(1), fish: state.fish.toFixed(2), sed: Math.round(state.sed), ps4, ps6 });
+  if (logEntries.length > 50) logEntries.pop();
+
+  const tbody = document.getElementById('logBody');
+  tbody.innerHTML = logEntries.slice(0, 12).map(r => {
+    const p4c = r.ps4 === 'OK' ? 'td-ok' : 'td-crit';
+    const p6c = r.ps6 === 'OK' ? 'td-ok' : (r.ps6 === 'WATCH' ? 'td-warn' : 'td-crit');
+    return `<tr>
+      <td>${r.ts}</td>
+      <td>${r.total}</td>
+      <td>${r.bio}</td>
+      <td class="${p4c}">${r.ratio}%</td>
+      <td>${r.temp}</td>
+      <td>${r.turb}</td>
+      <td>${r.do_}</td>
+      <td>${r.ph}</td>
+      <td>${r.fish}</td>
+      <td>${r.sed}</td>
+      <td class="${p4c}">${r.ps4}</td>
+      <td class="${p6c}">${r.ps6}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════
+   MAIN UPDATE
+════════════════════════════════════════ */
+function getSliders() {
+  return {
+    tf:   parseFloat(document.getElementById('sTotal').value),
+    bf:   parseFloat(document.getElementById('sBio').value),
+    temp: parseFloat(document.getElementById('sTemp').value),
+    turb: parseFloat(document.getElementById('sTurb').value),
+    do_:  parseFloat(document.getElementById('sDO').value),
+    ph:   parseFloat(document.getElementById('sPH').value),
+    fish: parseFloat(document.getElementById('sFish').value),
+    sed:  parseFloat(document.getElementById('sSed').value)
+  };
+}
+
+function updateSim() {
+  const s = getSliders();
+  const ratio = parseFloat((s.bf / s.tf * 100).toFixed(1));
+  s.ratio = ratio;
+
+  // label syncs
+  document.getElementById('lTotal').textContent = Math.round(s.tf);
+  document.getElementById('lBio').textContent = Math.round(s.bf);
+  document.getElementById('lTemp').textContent = s.temp.toFixed(1);
+  document.getElementById('lTurb').textContent = Math.round(s.turb);
+  document.getElementById('lDO').textContent = s.do_.toFixed(1);
+  document.getElementById('lPH').textContent = s.ph.toFixed(1);
+  document.getElementById('lFish').textContent = s.fish.toFixed(2);
+  document.getElementById('lSed').textContent = Math.round(s.sed);
+
+  // gauge
+  drawGauge(ratio);
+  document.getElementById('gaugePct').textContent = ratio.toFixed(1) + '%';
+  document.getElementById('gaugePct').className = 'gauge-big ' + (ratio >= 10 ? 'gauge-ok' : ratio >= 8 ? 'gauge-warn' : 'gauge-crit');
+  const surplus = (ratio - 10).toFixed(1);
+  document.getElementById('gaugeSurplus').textContent = ratio >= 10
+    ? 'Surplus above IFC PS4 minimum: +' + surplus + '%'
+    : 'Deficit below IFC PS4 minimum: ' + surplus + '%';
+  const gst = document.getElementById('gaugeStatus');
+  if (ratio >= 10)      { gst.innerHTML = '<span class="badge badge-ok">✓ PS4 Compliant</span>'; }
+  else if (ratio >= 8)  { gst.innerHTML = '<span class="badge badge-warn">⚠ Approaching violation</span>'; }
+  else                  { gst.innerHTML = '<span class="badge badge-crit">✗ PS4 Violation</span>'; }
+
+  // progress bars
+  pbar('pb-eflow', 'pb-eflow-v', ratio/20*100, ratio>=10?'#3fb950':ratio>=8?'#d29922':'#f85149', ratio.toFixed(1)+'%');
+  pbar('pb-do', 'pb-do-v', s.do_/14*100, s.do_>=5?'#3fb950':'#f85149', s.do_.toFixed(1)+' mg/L');
+  pbar('pb-turb', 'pb-turb-v', (1 - s.turb/200)*100, s.turb<=50?'#3fb950':s.turb<=80?'#d29922':'#f85149', Math.round(s.turb)+' NTU');
+  pbar('pb-fish', 'pb-fish-v', (1 - s.fish/3)*100, s.fish<=1.5?'#3fb950':'#f85149', s.fish.toFixed(2)+' m/s');
+
+  // PS4 metric cards
+  const ratioOk = ratio >= 10;
+  setCard('mc-ratio', ratioOk ? 'ok' : ratio >= 8 ? 'warn' : 'crit');
+  setVal('mv-ratio', ratio.toFixed(1) + '<span class="unit">%</span>');
+  setCard('mc-down', ratioOk ? 'ok' : 'warn');
+  setVal('mv-down', Math.round(s.bf) + '<span class="unit"> L/s</span>');
+  setCard('mc-temp', s.temp >= 8 && s.temp <= 22 ? 'ok' : 'warn');
+  setVal('mv-temp', s.temp.toFixed(1) + '<span class="unit">°C</span>');
+  setCard('mc-turb', s.turb <= 50 ? 'ok' : s.turb <= 80 ? 'warn' : 'crit');
+  setVal('mv-turb', Math.round(s.turb) + '<span class="unit"> NTU</span>');
+
+  // PS6 metric cards
+  setCard('mc-fish', s.fish <= 1.5 ? 'ok' : 'crit');
+  setVal('mv-fish', s.fish.toFixed(2) + '<span class="unit"> m/s</span>');
+  setCard('mc-do', s.do_ >= 5 ? 'ok' : s.do_ >= 4 ? 'warn' : 'crit');
+  setVal('mv-do', s.do_.toFixed(1) + '<span class="unit"> mg/L</span>');
+  setCard('mc-ph', s.ph >= 6.5 && s.ph <= 8.5 ? 'ok' : 'warn');
+  setVal('mv-ph', s.ph.toFixed(1));
+  setCard('mc-sed', s.sed <= 25 ? 'ok' : s.sed <= 40 ? 'warn' : 'crit');
+  setVal('mv-sed', Math.round(s.sed) + '<span class="unit">%</span>');
+
+  // compliance table
+  document.getElementById('ct-eflow').textContent = ratio.toFixed(1) + '%';
+  document.getElementById('ct-down').textContent = Math.round(s.bf) + ' L/s';
+  document.getElementById('ct-fish').textContent = s.fish.toFixed(2) + ' m/s';
+  document.getElementById('ct-do').textContent = s.do_.toFixed(1) + ' mg/L';
+  document.getElementById('ct-sed').textContent = Math.round(s.sed) + '%';
+  document.getElementById('ct-ph').textContent = s.ph.toFixed(1) + ' / ' + s.temp.toFixed(0) + '°C';
+
+  setBadge('cb-eflow', ratioOk, !ratioOk && ratio >= 8);
+  setBadge('cb-down', ratioOk, false);
+  setBadge('cb-fish', s.fish <= 1.5, false);
+  setBadge('cb-do', s.do_ >= 5, s.do_ >= 4);
+  setBadge('cb-sed', s.sed <= 25, s.sed <= 40);
+  setBadge('cb-ph', s.ph >= 6.5 && s.ph <= 8.5, false);
+
+  // alerts
+  buildAlerts(s);
+
+  // charts
+  const hist = genHistory(s.tf, s.bf, s.temp, s.turb, s.do_, s.fish, s.sed);
+  buildCharts(hist);
+
+  // log
+  tickCount++;
+  if (tickCount % 3 === 0) addLog(s);
+  else if (logEntries.length === 0) addLog(s);
+
+  document.getElementById('simStatus').textContent = 'Last update: ' + new Date().toLocaleTimeString();
+}
+
+/* ════════════════════════════════════════
+   SCENARIO
+════════════════════════════════════════ */
+function applyScenario(btn) {
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const sc = SCENARIOS[btn.dataset.scenario];
+  document.getElementById('sTotal').value = sc.total;
+  document.getElementById('sBio').value = sc.bio;
+  document.getElementById('sTemp').value = sc.temp;
+  document.getElementById('sTurb').value = sc.turb;
+  document.getElementById('sDO').value = sc.do_;
+  document.getElementById('sPH').value = sc.ph;
+  document.getElementById('sFish').value = sc.fish;
+  document.getElementById('sSed').value = sc.sed;
+  updateSim();
+}
+
+/* ════════════════════════════════════════
+   NOISE
+════════════════════════════════════════ */
+function setNoise(on, btn) {
+  noiseOn = on;
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (noiseInterval) { clearInterval(noiseInterval); noiseInterval = null; }
+  if (on) {
+    noiseInterval = setInterval(() => {
+      const ids = ['sTotal','sBio','sTemp','sTurb','sDO','sPH','sFish','sSed'];
+      const pcts = [0.03, 0.05, 0.02, 0.08, 0.04, 0.01, 0.04, 0.05];
+      ids.forEach((id, i) => {
+        const el = document.getElementById(id);
+        const v = parseFloat(el.value);
+        const min = parseFloat(el.min), max = parseFloat(el.max);
+        const nv = Math.min(max, Math.max(min, v * (1 + (Math.random()-0.5)*pcts[i])));
+        el.value = nv.toFixed(2);
+      });
+      updateSim();
+    }, 2000);
+  }
+}
+
+/* ════════════════════════════════════════
+   EXPORT
+════════════════════════════════════════ */
+function exportCSV() {
+  if (!logEntries.length) { alert('No log data yet. Run the simulator first.'); return; }
+  const headers = ['Timestamp','Total_Ls','Eflow_Ls','Ratio_pct','Temp_C','Turbidity_NTU','DO_mgL','pH','FishVel_ms','Sediment_pct','PS4_status','PS6_status'];
+  const rows = logEntries.map(r => [r.ts, r.total, r.bio, r.ratio, r.temp, r.turb, r.do_, r.ph, r.fish, r.sed, r.ps4, r.ps6].join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  download('ifc_eflow_log.csv', 'text/csv', csv);
+}
+
+function exportJSON() {
+  if (!logEntries.length) { alert('No log data yet. Run the simulator first.'); return; }
+  const payload = {
+    meta: { simulator: 'IFC PS E-Flow Nepal Hydropower', version: '1.0', exported: new Date().toISOString(), standards: ['PS4','PS6','PS8'] },
+    readings: logEntries
+  };
+  download('ifc_eflow_log.json', 'application/json', JSON.stringify(payload, null, 2));
+}
+
+function download(filename, type, content) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = filename;
+  a.click();
+}
+
+function printReport() {
+  const s = getSliders();
+  const ratio = parseFloat((s.bf / s.tf * 100).toFixed(1));
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <html><head><title>IFC PS Compliance Report</title>
+    <style>body{font-family:sans-serif;padding:30px;max-width:800px;margin:0 auto}
+    h1{font-size:18px;margin-bottom:4px}h2{font-size:14px;color:#555;margin:20px 0 8px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{border:1px solid #ddd;padding:7px 10px;text-align:left}
+    th{background:#f5f5f5}.ok{color:green}.crit{color:red}.warn{color:orange}
+    .header{border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:20px}
+    </style></head><body>
+    <div class="header">
+      <h1>IFC Performance Standards — E-Flow Compliance Report</h1>
+      <p style="font-size:12px;color:#666">Nepal Hydropower Project · Generated: ${new Date().toLocaleString()} · Simulated data</p>
+    </div>
+    <h2>Current sensor readings</h2>
+    <table>
+      <tr><th>Parameter</th><th>Value</th><th>IFC Threshold</th><th>PS</th><th>Status</th></tr>
+      <tr><td>E-flow ratio</td><td>${ratio}%</td><td>≥10%</td><td>PS4</td><td class="${ratio>=10?'ok':'crit'}">${ratio>=10?'COMPLIANT':'VIOLATION'}</td></tr>
+      <tr><td>Dissolved O₂</td><td>${s.do_.toFixed(1)} mg/L</td><td>≥5 mg/L</td><td>PS6</td><td class="${s.do_>=5?'ok':'crit'}">${s.do_>=5?'COMPLIANT':'VIOLATION'}</td></tr>
+      <tr><td>Turbidity</td><td>${Math.round(s.turb)} NTU</td><td>&lt;50 NTU</td><td>PS6</td><td class="${s.turb<=50?'ok':s.turb<=80?'warn':'crit'}">${s.turb<=50?'OK':s.turb<=80?'WATCH':'VIOLATION'}</td></tr>
+      <tr><td>Fish passage velocity</td><td>${s.fish.toFixed(2)} m/s</td><td>&lt;1.5 m/s</td><td>PS6</td><td class="${s.fish<=1.5?'ok':'crit'}">${s.fish<=1.5?'COMPLIANT':'VIOLATION'}</td></tr>
+      <tr><td>Sediment load</td><td>${Math.round(s.sed)}%</td><td>Ref: 25% (Kulekhani)</td><td>PS6</td><td class="${s.sed<=25?'ok':'warn'}">${s.sed<=25?'OK':'WATCH'}</td></tr>
+      <tr><td>pH</td><td>${s.ph.toFixed(1)}</td><td>6.5–8.5</td><td>PS8</td><td class="${s.ph>=6.5&&s.ph<=8.5?'ok':'warn'}">${s.ph>=6.5&&s.ph<=8.5?'OK':'WATCH'}</td></tr>
+      <tr><td>Water temperature</td><td>${s.temp.toFixed(1)}°C</td><td>8–22°C</td><td>PS4</td><td class="${s.temp>=8&&s.temp<=22?'ok':'warn'}">${s.temp>=8&&s.temp<=22?'OK':'WATCH'}</td></tr>
+    </table>
+    <h2>Nepal compliance gap reference (IFC PS document)</h2>
+    <table>
+      <tr><th>PS</th><th>Gap severity</th><th>Nepal status</th><th>Key impact</th></tr>
+      <tr><td>PS4</td><td class="crit">CRITICAL</td><td>10% min flow rule rarely monitored; no GLOF integration</td><td>Downstream risk</td></tr>
+      <tr><td>PS6</td><td class="warn">HIGH</td><td>No cumulative/offset requirement; fish passage unaddressed</td><td>Ecosystem collapse</td></tr>
+      <tr><td>PS8</td><td>MOD</td><td>No chance-find protocol; sacred rivers unprotected</td><td>Heritage loss</td></tr>
+    </table>
+    <p style="font-size:11px;color:#999;margin-top:30px">This report is based on simulated sensor data only and is not for regulatory submission.</p>
+    </body></html>
+  `);
+  win.print();
+}
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+updateSim();
+</script>
+</body>
+</html>
