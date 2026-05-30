@@ -195,7 +195,7 @@
 
   input[type=range] {
     width: 100%; height: 4px;
-    appearance: none;
+    -webkit-appearance: none;
     background: var(--border2);
     border-radius: 2px; outline: none; cursor: pointer;
   }
@@ -331,6 +331,37 @@
 
   /* chart canvas wrapper */
   .chart-wrap { position: relative; width: 100%; }
+
+  /* river flow visualization */
+  .river-wrap {
+    position: relative; width: 100%; height: 260px;
+    border-radius: 8px; overflow: hidden;
+    background: linear-gradient(180deg, #0a1428 0%, #0d1a30 100%);
+    border: 1px solid var(--bg3);
+  }
+  .river-wrap canvas { display:block; width:100%; height:100%; }
+  .river-labels { position:absolute; inset:0; pointer-events:none; }
+  .river-label {
+    position:absolute; padding:5px 10px; border-radius:14px;
+    font-size:11px; font-weight:600; font-family:var(--mono);
+    background:rgba(13,17,23,0.78); border:1px solid rgba(255,255,255,0.1);
+    color:#fff; backdrop-filter: blur(4px);
+  }
+  .river-label.r-up   { top:50%; left:10px; transform:translateY(-50%); }
+  .river-label.r-power{ top:18%; right:12px; color:#58a6ff; border-color:rgba(88,166,255,0.4); }
+  .river-label.r-bio  { bottom:18%; right:12px; color:#3fb950; border-color:rgba(63,185,80,0.4); }
+  .river-alert {
+    position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    background:rgba(248,81,73,0.92); color:#fff; padding:8px 16px;
+    border-radius:6px; font-weight:700; font-size:12px;
+    box-shadow:0 0 20px rgba(248,81,73,0.6); z-index:5;
+    border:1px solid #f85149; animation: riverPulse 1.4s infinite alternate;
+  }
+  .river-alert.hidden { display:none; }
+  @keyframes riverPulse {
+    0%   { transform:translateX(-50%) scale(1);    box-shadow:0 0 16px rgba(248,81,73,0.5); }
+    100% { transform:translateX(-50%) scale(1.04); box-shadow:0 0 32px rgba(248,81,73,0.9); }
+  }
 </style>
 </head>
 <body>
@@ -455,6 +486,20 @@
         <div class="pbar-label"><span>Fish passage</span><span id="pb-fish-v">0.92 m/s</span></div>
         <div class="pbar-track"><div class="pbar-fill" id="pb-fish" style="width:61%;background:#3fb950"></div></div>
       </div>
+    </div>
+  </div>
+
+  <!-- RIVER FLOW VISUALIZATION -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">🌊 Live river flow — intake vs e-flow split</div>
+    <div class="river-wrap">
+      <canvas id="riverCanvas" aria-label="Animated river flow split between hydropower intake and downstream e-flow"></canvas>
+      <div class="river-labels">
+        <div class="river-label r-up">⬆ Upstream river inflow</div>
+        <div class="river-label r-power">⚡ Hydropower intake</div>
+        <div class="river-label r-bio">🌿 Downstream e-flow</div>
+      </div>
+      <div class="river-alert hidden" id="riverAlert">⚠️ E-flow below IFC PS4 10% minimum</div>
     </div>
   </div>
 
@@ -1123,6 +1168,130 @@ function printReport() {
    INIT
 ════════════════════════════════════════ */
 updateSim();
+
+/* ════════════════════════════════════════
+   RIVER FLOW ANIMATION
+════════════════════════════════════════ */
+(function initRiver() {
+  const canvas = document.getElementById('riverCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, particles = [];
+  const COLOR_IN = '#4fc3ff', COLOR_POWER = '#58a6ff', COLOR_BIO = '#3fb950', COLOR_ALERT = '#f85149';
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function spawn() {
+    return {
+      x: 0, y: H * 0.45 + (Math.random()-0.5) * H * 0.18,
+      vx: 1.2 + Math.random() * 1.8, vy: 0,
+      r: 1.2 + Math.random() * 2.2, life: 1, branch: null,
+    };
+  }
+
+  function readState() {
+    const tf = parseFloat(document.getElementById('sTotal').value) || 1;
+    const bf = parseFloat(document.getElementById('sBio').value) || 0;
+    const ratio = Math.max(0, Math.min(100, (bf / tf) * 100));
+    return { tf, bf, ratio, bioFrac: Math.max(0, Math.min(1, bf / tf)) };
+  }
+
+  function drawDam(splitX) {
+    // dam structure
+    ctx.fillStyle = '#1c2333';
+    ctx.fillRect(splitX - 6, H * 0.15, 12, H * 0.7);
+    ctx.fillStyle = '#2d3548';
+    ctx.fillRect(splitX - 14, H * 0.13, 28, 6);
+    ctx.fillStyle = '#0d1117';
+    // intake gate (top)
+    ctx.fillRect(splitX - 6, H * 0.28, 12, 18);
+    // e-flow gate (bottom)
+    ctx.fillRect(splitX - 6, H * 0.62, 12, 12);
+  }
+
+  function frame() {
+    const s = readState();
+    const violation = s.ratio < 10;
+    document.getElementById('riverAlert').classList.toggle('hidden', !violation);
+
+    ctx.clearRect(0,0,W,H);
+
+    // riverbed shading
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'rgba(20,40,70,0.0)');
+    g.addColorStop(0.45,'rgba(30,70,120,0.25)');
+    g.addColorStop(0.55,'rgba(30,70,120,0.25)');
+    g.addColorStop(1,'rgba(20,40,70,0.0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    const splitX = W * 0.48;
+    drawDam(splitX);
+
+    // spawn proportional to total flow
+    const spawnRate = Math.max(1, Math.round(s.tf / 80));
+    for (let i = 0; i < spawnRate; i++) particles.push(spawn());
+
+    // update + draw
+    const powerY = H * 0.22, bioY = H * 0.7;
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      // before dam: flow right
+      if (p.x < splitX - 8) {
+        p.x += p.vx;
+        p.y += (H*0.5 - p.y) * 0.02 + (Math.random()-0.5)*0.3;
+        p.color = COLOR_IN;
+      } else if (p.branch === null) {
+        // assign branch based on bio fraction
+        p.branch = Math.random() < s.bioFrac ? 'bio' : 'power';
+        p.targetY = p.branch === 'bio' ? bioY : powerY;
+        p.color = p.branch === 'bio' ? (violation ? COLOR_ALERT : COLOR_BIO) : COLOR_POWER;
+      } else {
+        p.x += p.vx;
+        p.y += (p.targetY - p.y) * 0.06;
+      }
+
+      // fade at end
+      if (p.x > W - 20) p.life -= 0.04;
+      if (p.life <= 0 || p.x > W + 10) { particles.splice(i,1); continue; }
+
+      ctx.globalAlpha = p.life * 0.85;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fill();
+      // glow
+      ctx.globalAlpha = p.life * 0.25;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * 2.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // cap particle count
+    if (particles.length > 1200) particles.splice(0, particles.length - 1200);
+
+    // flow rate readouts
+    ctx.font = '600 11px ui-monospace, monospace';
+    ctx.fillStyle = COLOR_POWER;
+    ctx.fillText(`${Math.round(s.tf - s.bf)} L/s  (${(100 - s.ratio).toFixed(1)}%)`, splitX + 16, powerY - 8);
+    ctx.fillStyle = violation ? COLOR_ALERT : COLOR_BIO;
+    ctx.fillText(`${Math.round(s.bf)} L/s  (${s.ratio.toFixed(1)}%)`, splitX + 16, bioY + 18);
+    ctx.fillStyle = '#9da5b4';
+    ctx.fillText(`${Math.round(s.tf)} L/s total`, 12, H * 0.5 - 12);
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
 </script>
 </body>
 </html>
