@@ -531,29 +531,15 @@ input[type=range]::-webkit-slider-thumb{border-color:#fff;}
       </div>
 
       <div class="glass-panel">
-        <h2>Season</h2>
-        <div class="weather-grid" id="seasonGrid">
-          <button class="weather-btn" data-season="spring"  data-flow="380"  onclick="setSeason(this)">Spring<span class="wb-flow">380 m³/s</span></button>
-          <button class="weather-btn" data-season="summer"  data-flow="560"  onclick="setSeason(this)">Summer<span class="wb-flow">560 m³/s</span></button>
-          <button class="weather-btn active" data-season="monsoon" data-flow="900" onclick="setSeason(this)">Monsoon<span class="wb-flow">900 m³/s</span></button>
-          <button class="weather-btn" data-season="autumn"  data-flow="420"  onclick="setSeason(this)">Autumn<span class="wb-flow">420 m³/s</span></button>
-          <button class="weather-btn" data-season="winter"  data-flow="140"  onclick="setSeason(this)">Winter<span class="wb-flow">140 m³/s</span></button>
-          <button class="weather-btn" data-season="drySpring" data-flow="220" onclick="setSeason(this)">Pre-Mon.<span class="wb-flow">220 m³/s</span></button>
-        </div>
-        <p class="description" style="margin-top:10px;">Switch seasons to see snowpack, monsoon clouds, vegetation and river inflow change together.</p>
-      </div>
-
-      <div class="glass-panel">
-        <h2>Weather scenario</h2>
+        <h2>IFC simulation scenario</h2>
         <div class="weather-grid" id="weatherGrid">
-          <button class="weather-btn" data-flow="60"   onclick="setWeather(this)">Drought<span class="wb-flow">60 m³/s</span></button>
-          <button class="weather-btn" data-flow="180"  onclick="setWeather(this)">Dry<span class="wb-flow">180 m³/s</span></button>
-          <button class="weather-btn active" data-flow="500" onclick="setWeather(this)">Normal<span class="wb-flow">500 m³/s</span></button>
-          <button class="weather-btn" data-flow="720"  onclick="setWeather(this)">Rain<span class="wb-flow">720 m³/s</span></button>
-          <button class="weather-btn" data-flow="900"  onclick="setWeather(this)">Monsoon<span class="wb-flow">900 m³/s</span></button>
-          <button class="weather-btn" data-flow="1000" onclick="setWeather(this)">Storm<span class="wb-flow">1000 m³/s</span></button>
+          <button class="weather-btn active" data-scenario="normal"    data-flow="500"  onclick="setIfcWeather(this)">Normal<span class="wb-flow">500 m³/s</span></button>
+          <button class="weather-btn"        data-scenario="drought"   data-flow="80"   onclick="setIfcWeather(this)">Dry season drought<span class="wb-flow">80 m³/s</span></button>
+          <button class="weather-btn"        data-scenario="flood"     data-flow="900"  onclick="setIfcWeather(this)">Monsoon flood<span class="wb-flow">900 m³/s</span></button>
+          <button class="weather-btn"        data-scenario="violation" data-flow="300"  onclick="setIfcWeather(this)">PS4 violation<span class="wb-flow">300 m³/s</span></button>
+          <button class="weather-btn"        data-scenario="glof"      data-flow="1000" onclick="setIfcWeather(this)">GLOF event<span class="wb-flow">1000 m³/s</span></button>
         </div>
-        <p class="description" style="margin-top:10px;">Pick a weather scenario to set typical river inflow for that season.</p>
+        <p class="description" style="margin-top:10px;">Each scenario mirrors the IFC PS compliance simulator — inflow, sensors and compliance update together.</p>
       </div>
 
 
@@ -1725,6 +1711,30 @@ function applyScenario(btn) {
   });
   updateCompliance();
 }
+
+function setIfcWeather(btn) {
+  document.querySelectorAll('#weatherGrid .weather-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const flow = parseFloat(btn.dataset.flow);
+  const inflow = document.getElementById('inflowSlider');
+  if (inflow) { inflow.value = flow; if (typeof onSimInput === 'function') onSimInput(); }
+  const scKey = btn.dataset.scenario;
+  const seasonMap = { normal:'summer', drought:'drySpring', flood:'monsoon', violation:'summer', glof:'winter' };
+  if (typeof currentSeason !== 'undefined') currentSeason = seasonMap[scKey] || 'summer';
+  const sc = SCENARIOS[scKey];
+  if (sc) {
+    ['sTotal','sBio','sTemp','sDO','sSed'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el) el.value = [sc.total, sc.bio, sc.temp, sc.do_, sc.sed][i];
+    });
+    document.querySelectorAll('.scenario-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.scenario === scKey);
+    });
+    if (typeof updateCompliance === 'function') updateCompliance();
+  }
+}
+
+
 
 function setNoise(on, btn) {
   cNoiseOn = on;
