@@ -3,17 +3,17 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "IFC PS E-Flow Compliance Monitor — Nepal Hydropower" },
+      { title: "HydroFlow — IFC PS E-Flow Compliance Simulator" },
       {
         name: "description",
         content:
-          "Live IFC Performance Standard environmental flow compliance dashboard for Nepal hydropower projects.",
+          "HydroFlow simulates IFC Performance Standards PS4, PS6 and PS8 environmental flow compliance for Nepal hydropower projects.",
       },
-      { property: "og:title", content: "IFC PS E-Flow Compliance Monitor" },
+      { property: "og:title", content: "HydroFlow — IFC PS E-Flow Compliance Simulator" },
       {
         property: "og:description",
         content:
-          "Real-time hydrograph, power curve, flow simulation, and IFC compliance monitoring.",
+          "Real-time environmental flow, biodiversity and cultural heritage compliance monitoring for run-of-river hydropower.",
       },
     ],
   }),
@@ -23,9 +23,16 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <iframe
-      src="/simulator.html"
+      src="/hydroflow.html"
       title="IFC PS E-Flow Compliance Simulator"
-      className="h-screen w-screen border-0"
+      style={{
+        position: "fixed",
+        inset: 0,
+        width: "100vw",
+        height: "100vh",
+        border: 0,
+        background: "#ffffff",
+      }}
     />
   );
 }

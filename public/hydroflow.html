@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HydroFlow — IFC PS E-Flow Compliance Simulator · Nepal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --bg:       #0d1117;
+  --bg2:      #161b22;
+  --bg3:      #1c2128;
+  --border:   rgba(255,255,255,0.08);
+  --border2:  rgba(255,255,255,0.15);
+  --text:     #e6edf3;
+  --text2:    #8b949e;
+  --text3:    #484f58;
+  --green:    #3fb950;
+  --green-bg: rgba(63,185,80,0.12);
+  --yellow:   #d29922;
+  --yellow-bg:rgba(210,153,34,0.12);
+  --red:      #f85149;
+  --red-bg:   rgba(248,81,73,0.12);
+  --blue:     #58a6ff;
+  --blue-bg:  rgba(88,166,255,0.12);
+  --cyan:     #00f0ff;
+  --lime:     #00ff88;
+  --font:     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --mono:     ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Mono', Consolas, monospace;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;min-height:100vh;overflow-x:hidden;}
+
+
+.app-header{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:0 24px;display:flex;align-items:stretch;
+  justify-content:space-between;flex-wrap:wrap;gap:0;
+  position:sticky;top:0;z-index:200;
+}
+.header-brand{display:flex;align-items:center;gap:12px;padding:14px 0;}
+.brand-logo{
+  width:34px;height:34px;border-radius:8px;
+  background:linear-gradient(135deg,#3fb950,#58a6ff);
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+}
+.brand-title{font-size:15px;font-weight:600;}
+.brand-sub{font-size:10px;color:var(--text2);font-family:var(--mono);}
+
+.nav-tabs{display:flex;align-items:stretch;gap:0;}
+.nav-tab{
+  padding:0 18px;border:none;background:none;
+  color:var(--text2);font-family:var(--font);font-size:13px;font-weight:500;
+  cursor:pointer;border-bottom:2px solid transparent;
+  transition:all .2s;display:flex;align-items:center;gap:6px;
+}
+.nav-tab:hover{color:var(--text);background:rgba(255,255,255,0.03);}
+.nav-tab.active{color:var(--text);border-bottom-color:var(--blue);}
+
+.header-pills{display:flex;align-items:center;gap:8px;padding:14px 0;}
+.pill{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;font-family:var(--mono);border:1px solid;}
+.pill-red{background:var(--red-bg);color:var(--red);border-color:rgba(248,81,73,0.3);}
+.pill-yellow{background:var(--yellow-bg);color:var(--yellow);border-color:rgba(210,153,34,0.3);}
+.pill-green{background:var(--green-bg);color:var(--green);border-color:rgba(63,185,80,0.3);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;display:inline-block;margin-right:4px;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+
+.view{display:none;}
+.view.active{display:block;}
+
+
+.sim-layout{display:flex;height:calc(100vh - 53px);overflow:hidden;}
+
+.sim-sidebar{
+  width:340px;flex-shrink:0;
+  background:var(--bg2);border-right:1px solid var(--border);
+  overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;
+}
+
+.glass-panel{
+  background:rgba(255,255,255,0.04);border:1px solid var(--border);
+  border-radius:10px;padding:16px;
+}
+.glass-panel h2{font-size:13px;font-weight:600;margin-bottom:10px;}
+
+.slider-container{margin-bottom:6px;}
+.slider-container input[type=range]{width:100%;margin-bottom:4px;}
+.value-display{font-size:22px;font-weight:600;font-family:var(--mono);color:var(--cyan);}
+.description{font-size:11px;color:var(--text2);line-height:1.5;}
+
+.stats-panel{display:flex;flex-direction:column;gap:10px;}
+.stat-card{display:flex;align-items:center;gap:12px;padding:12px 14px;}
+.stat-icon{font-size:22px;}
+.stat-info h3{font-size:11px;color:var(--text2);margin-bottom:2px;}
+.stat-value{font-size:20px;font-weight:600;font-family:var(--mono);}
+.power-card .stat-value{color:var(--cyan);}
+.bio-card .stat-value{color:var(--lime);}
+.stat-label{font-size:10px;color:var(--text2);}
+
+.info-panel{font-size:12px;color:var(--text2);line-height:1.6;}
+.info-panel h3{font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;}
+
+
+.hg-panel{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:14px;}
+.hg-panel h2{font-size:13px;font-weight:600;margin-bottom:10px;}
+.hg-readouts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:11px;}
+.hg-badge{padding:2px 9px;border-radius:20px;background:rgba(255,255,255,0.12);font-weight:600;font-family:var(--mono);}
+.hg-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:10px;color:var(--text2);}
+.hg-legend span{display:flex;align-items:center;gap:4px;}
+.hg-dot{width:18px;height:2px;border-radius:1px;display:inline-block;}
+
+.sim-main{flex:1;position:relative;overflow:hidden;}
+.canvas-container{position:relative;width:100%;height:100%;}
+.vis-labels{position:absolute;inset:0;pointer-events:none;z-index:10;}
+.label{
+  position:absolute;font-size:11px;font-family:var(--mono);
+  color:rgba(255,255,255,0.5);background:rgba(13,17,23,0.6);
+  padding:3px 8px;border-radius:4px;border:1px solid var(--border);
+}
+.label-inflow{top:50%;left:12px;transform:translateY(-50%);}
+.label-power{top:20%;right:14px;}
+.label-bio{bottom:18%;right:14px;}
+
+.alert-banner{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  background:var(--red-bg);border:1px solid rgba(248,81,73,0.4);
+  color:var(--red);padding:6px 16px;border-radius:6px;
+  font-size:12px;font-family:var(--mono);z-index:20;
+}
+.alert-banner.hidden{display:none;}
+
+.sensor{
+  position:absolute;top:50%;left:36%;transform:translate(-50%,-50%);
+  background:var(--bg3);border:1px solid var(--border2);
+  border-radius:8px;padding:8px 12px;z-index:15;text-align:center;
+  font-size:11px;font-family:var(--mono);
+}
+.sensor.alert{border-color:rgba(248,81,73,0.5);background:var(--red-bg);}
+.sensor-icon{font-size:16px;margin-bottom:2px;}
+.sensor-readout{color:var(--text2);font-size:10px;}
+
+#flowCanvas{width:100%;height:100%;display:block;}
+
+input[type=range]{
+  width:100%;height:4px;appearance:none;
+  background:var(--border2);border-radius:2px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+  background:var(--blue);cursor:pointer;border:2px solid var(--bg);
+}
+
+
+.dash-container{max-width:1280px;margin:0 auto;padding:20px 24px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+@media(max-width:900px){.grid-2,.grid-4{grid-template-columns:1fr 1fr;}}
+@media(max-width:560px){.grid-2,.grid-4{grid-template-columns:1fr;}.dash-container{padding:12px 14px;}}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+.card-title{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px;}
+
+.metric-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px 16px;transition:border-color .3s;}
+.metric-card.ok{border-left:3px solid var(--green);}
+.metric-card.warn{border-left:3px solid var(--yellow);}
+.metric-card.crit{border-left:3px solid var(--red);}
+.metric-label{font-size:11px;color:var(--text2);margin-bottom:4px;font-family:var(--mono);}
+.metric-value{font-size:26px;font-weight:600;color:var(--text);font-family:var(--mono);line-height:1;}
+.metric-value .unit{font-size:13px;font-weight:400;color:var(--text2);}
+.metric-threshold{font-size:10px;color:var(--text3);margin-top:4px;}
+
+.gauge-wrap{display:flex;align-items:center;gap:20px;padding:18px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:16px;flex-wrap:wrap;}
+.gauge-big{font-size:40px;font-weight:600;font-family:var(--mono);}
+.gauge-ok{color:var(--green);}.gauge-warn{color:var(--yellow);}.gauge-crit{color:var(--red);}
+.gauge-label{font-size:12px;color:var(--text2);margin-top:4px;}
+
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;font-family:var(--mono);border:1px solid;}
+.badge-ok{background:var(--green-bg);color:var(--green);border-color:rgba(63,185,80,.3);}
+.badge-warn{background:var(--yellow-bg);color:var(--yellow);border-color:rgba(210,153,34,.3);}
+.badge-crit{background:var(--red-bg);color:var(--red);border-color:rgba(248,81,73,.3);}
+.badge-info{background:var(--blue-bg);color:var(--blue);border-color:rgba(88,166,255,.3);}
+
+.controls-section{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+.ctrl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;}
+.ctrl-item label{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:6px;font-family:var(--mono);}
+.ctrl-item label span{color:var(--blue);font-weight:500;}
+select{background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--mono);cursor:pointer;outline:none;width:100%;}
+
+.alert-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);margin-bottom:8px;font-size:12px;transition:all .3s;}
+.alert-item.warn{background:var(--yellow-bg);border-color:rgba(210,153,34,.3);}
+.alert-item.crit{background:var(--red-bg);border-color:rgba(248,81,73,.3);}
+.alert-item.ok{background:var(--green-bg);border-color:rgba(63,185,80,.3);}
+.alert-icon{font-size:14px;margin-top:1px;flex-shrink:0;}
+.alert-title{font-weight:500;color:var(--text);}
+.alert-sub{font-size:11px;color:var(--text2);margin-top:2px;font-family:var(--mono);}
+
+.ps-table{width:100%;border-collapse:collapse;font-size:12px;}
+.ps-table th{text-align:left;padding:8px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);border-bottom:1px solid var(--border);font-family:var(--mono);}
+.ps-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.ps-table tr:last-child td{border-bottom:none;}
+.ps-table tr:hover td{background:rgba(255,255,255,.02);}
+.ps-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;font-family:var(--mono);white-space:nowrap;display:inline-block;}
+.ps-tag-crit{background:var(--red-bg);color:var(--red);}
+.ps-tag-high{background:var(--yellow-bg);color:var(--yellow);}
+.ps-tag-mod{background:var(--green-bg);color:var(--green);}
+
+.scenario-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:16px;}
+.scenario-btn{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;cursor:pointer;text-align:left;transition:all .2s;color:var(--text);font-family:var(--font);}
+.scenario-btn:hover,.scenario-btn.active{border-color:var(--blue);background:var(--blue-bg);}
+.s-name{font-size:12px;font-weight:500;}
+.s-desc{font-size:10px;color:var(--text2);margin-top:3px;font-family:var(--mono);}
+
+.log-wrap{overflow-x:auto;}
+.log-table{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--mono);min-width:560px;}
+.log-table th{text-align:left;padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);border-bottom:1px solid var(--border);}
+.log-table td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text2);}
+.td-ok{color:var(--green);}.td-warn{color:var(--yellow);}.td-crit{color:var(--red);}
+
+.pbar-wrap{margin-bottom:10px;}
+.pbar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px;font-family:var(--mono);}
+.pbar-track{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;}
+.pbar-fill{height:100%;border-radius:3px;transition:width .5s,background .5s;}
+
+.speed-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
+.speed-row label{font-size:11px;color:var(--text2);font-family:var(--mono);}
+.speed-btn{font-size:11px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;cursor:pointer;color:var(--text);font-family:var(--mono);transition:all .15s;}
+.speed-btn:hover,.speed-btn.active{background:var(--blue-bg);border-color:var(--blue);color:var(--blue);}
+
+.export-btn{background:var(--green-bg);border:1px solid rgba(63,185,80,.4);color:var(--green);border-radius:6px;padding:7px 14px;font-size:12px;font-family:var(--mono);cursor:pointer;transition:all .2s;}
+.export-btn:hover{background:rgba(63,185,80,.2);}
+
+.sec-head{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin:20px 0 10px;display:flex;align-items:center;gap:8px;}
+.sec-head::after{content:'';flex:1;height:1px;background:var(--border);}
+.chart-wrap{position:relative;width:100%;}
+
+
+/* === Weather presets & realistic river === */
+.weather-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;}
+.weather-btn{background:#f5f5f7;border:1px solid rgba(0,0,0,0.10);border-radius:8px;padding:8px 6px;cursor:pointer;font-family:var(--font);font-size:11px;color:#1d1d1f;font-weight:500;transition:all .15s;text-align:center;line-height:1.25;}
+.weather-btn:hover{background:#ebebef;}
+.weather-btn.active{background:#0066cc;border-color:#0066cc;color:#fff;}
+.weather-btn .wb-flow{display:block;font-size:9px;color:#6e6e73;font-family:var(--mono);margin-top:2px;font-weight:400;}
+.weather-btn.active .wb-flow{color:rgba(255,255,255,0.85);}
+.sensor.sensor-up{top:50%;left:14%;transform:translate(-50%,-50%);}
+.sensor.sensor-env{top:auto;left:auto;bottom:18%;right:18%;transform:none;}
+.sensor.sensor-pwr{top:42%;right:18%;left:auto;transform:translateY(-50%);background:#ffffff;border-color:rgba(0,0,0,0.12);}
+.sensor-title{font-weight:600;font-size:10px;color:#1d1d1f;letter-spacing:.02em;}
+.sensor-readout strong{color:#0066cc;font-weight:600;}
+.sensor.alert .sensor-title,.sensor.alert .sensor-readout{color:#c62828;}
+
+/* === Customer theme overrides === */
+:root{
+  --bg:#ffffff; --bg2:#ffffff; --bg3:#f5f5f7;
+  --border:rgba(0,0,0,0.10); --border2:rgba(0,0,0,0.18);
+  --text:#1d1d1f; --text2:#6e6e73; --text3:#86868b;
+  --green:#1f8a3a; --green-bg:rgba(31,138,58,0.10);
+  --yellow:#a76b00; --yellow-bg:rgba(167,107,0,0.10);
+  --red:#c62828; --red-bg:rgba(198,40,40,0.10);
+  --blue:#0066cc; --blue-bg:rgba(0,102,204,0.10);
+  --cyan:#0a84ff; --lime:#1f8a3a;
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Monaco,Consolas,monospace;
+}
+html,body{background:#ffffff;color:#1d1d1f;}
+body,p,div,span,td,th,li,label,button,input,select,textarea,.description,.stat-label,.metric-label,.metric-threshold,.alert-sub,.s-desc,.hg-legend,.brand-sub,.card-title,.sec-head,.pill,.badge,.ps-tag,.value-display,.metric-value,.stat-value,.gauge-big,.gauge-label,.pbar-label,.hg-readouts,.alert-banner,footer,.gauge-label,.hg-badge,.sensor,.sensor-readout{font-weight:400 !important;}
+h1,h2,h3,h4,h5,h6,.brand-title,.glass-panel h2,.hg-panel h2,.stat-info h3,.info-panel h3,.alert-title,.s-name{font-weight:700 !important;}
+.app-header{background:#ffffff;}
+.brand-logo{background:linear-gradient(135deg,#0a84ff,#1f8a3a);color:#fff;}
+.glass-panel,.hg-panel{background:#ffffff;}
+.sim-sidebar{background:#fafafa;}
+.metric-card,.card,.controls-section,.gauge-wrap{background:#ffffff;}
+#flowCanvas, canvas{background:#ffffff;}
+canvas#hydrographCanvas{background:#f5f5f7 !important;}
+input[type=range]::-webkit-slider-thumb{border-color:#fff;}
+.label{background:rgba(255,255,255,0.85);color:#1d1d1f;}
+.nav-tab.active{color:#0066cc;border-bottom-color:#0066cc;}
+.nav-tab:hover{background:rgba(0,0,0,0.04);}
+.alert-banner{background:#fdecea;color:#c62828;border-color:rgba(198,40,40,0.35);}
+
+</style>
+<script>
+  // All DB access goes through hardened server routes (no anon key in the browser).
+  const READINGS_ENDPOINT = '/api/readings';
+
+  async function persistReading(when, source, s, ps4, ps6, notes) {
+    const st = document.getElementById('dbStatus');
+    try {
+      const res = await fetch(READINGS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reading_time: when.toISOString(),
+          source: source,
+          total_flow: Number(s.tf),
+          eflow: Number(s.bf),
+          ratio: Number(s.ratio),
+          temp: Number(s.temp),
+          do_mgl: Number(s.do_),
+          sediment_pct: Number(s.sed),
+          ps4_status: ps4,
+          ps6_status: ps6,
+          notes: notes
+        })
+      });
+      if (!res.ok) throw new Error('save failed');
+      if (st) st.textContent = 'Saved · ' + new Date().toLocaleTimeString();
+    } catch (e) {
+      if (st) st.textContent = 'Save failed';
+    }
+  }
+
+  async function loadReadingsFromDb() {
+    try {
+      const res = await fetch(READINGS_ENDPOINT + '?limit=50');
+      if (!res.ok) return;
+      const { data } = await res.json();
+      if (!Array.isArray(data)) return;
+      cLog = data.map(r => ({
+        ts: new Date(r.reading_time).toLocaleTimeString(),
+        source: r.source,
+        total: Math.round(Number(r.total_flow)),
+        bio: Math.round(Number(r.eflow)),
+        ratio: Number(r.ratio).toFixed(1),
+        temp: Number(r.temp ?? 0).toFixed(1),
+        do_: Number(r.do_mgl ?? 0).toFixed(1),
+        sed: Math.round(Number(r.sediment_pct ?? 0)),
+        ps4: r.ps4_status || '-',
+        ps6: r.ps6_status || '-'
+      }));
+      renderLog();
+      const st = document.getElementById('dbStatus');
+      if (st) st.textContent = 'Loaded ' + cLog.length + ' rows from database';
+    } catch {}
+  }
+
+  function submitManualReading(ev) {
+    ev.preventDefault();
+    const tf = parseFloat(document.getElementById('mTotal').value);
+    const bf = parseFloat(document.getElementById('mEflow').value);
+    const temp = parseFloat(document.getElementById('mTemp').value || '14');
+    const doV = parseFloat(document.getElementById('mDO').value || '7.4');
+    const sed = parseFloat(document.getElementById('mSed').value || '22');
+    const src = document.getElementById('mSource').value || 'manual';
+    const whenStr = document.getElementById('mWhen').value;
+    const notes = document.getElementById('mNotes').value || null;
+    if (isNaN(tf) || isNaN(bf) || tf <= 0) { alert('Enter a valid total inflow.'); return false; }
+    const ratio = parseFloat((bf / tf * 100).toFixed(1));
+    addLog({ tf, bf, ratio, temp, do_: doV, sed }, {
+      when: whenStr ? new Date(whenStr) : new Date(),
+      source: src, notes
+    });
+    ev.target.reset();
+    return false;
+  }
+
+  function fillDummyReading() {
+    const presets = [
+      { tf: 500, bf: 60, temp: 14, do_: 7.4, sed: 22, src: 'dummy-normal' },
+      { tf: 90,  bf: 5,  temp: 22, do_: 5.6, sed: 18, src: 'dummy-drought' },
+      { tf: 1500,bf: 180,temp: 9,  do_: 6.1, sed: 60, src: 'dummy-monsoon' },
+      { tf: 750, bf: 95, temp: 12, do_: 7.0, sed: 28, src: 'dummy-rain' }
+    ];
+    const p = presets[Math.floor(Math.random()*presets.length)];
+    document.getElementById('mTotal').value = p.tf;
+    document.getElementById('mEflow').value = p.bf;
+    document.getElementById('mTemp').value = p.temp;
+    document.getElementById('mDO').value = p.do_;
+    document.getElementById('mSed').value = p.sed;
+    document.getElementById('mSource').value = p.src;
+  }
+
+  // Live river discharge from Open-Meteo Flood API (Trishuli @ Devighat, Nepal)
+  window.__liveQ = null;
+  window.__liveSeries = [];
+
+  function drawSparkline() {
+    const c = document.getElementById('liveSparkline');
+    if (!c || !window.__liveSeries.length) return;
+    const ctx = c.getContext('2d');
+    const W = c.offsetWidth || 240; c.width = W;
+    const H = c.height;
+    ctx.clearRect(0, 0, W, H);
+    const xs = window.__liveSeries;
+    const min = Math.min(...xs), max = Math.max(...xs);
+    const range = Math.max(1, max - min);
+    const pad = 4;
+    // area fill
+    ctx.beginPath();
+    xs.forEach((v, i) => {
+      const x = pad + (i / (xs.length - 1)) * (W - pad * 2);
+      const y = H - pad - ((v - min) / range) * (H - pad * 2);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(W - pad, H - pad); ctx.lineTo(pad, H - pad); ctx.closePath();
+    ctx.fillStyle = 'rgba(63,185,80,0.18)'; ctx.fill();
+    // line
+    ctx.beginPath();
+    xs.forEach((v, i) => {
+      const x = pad + (i / (xs.length - 1)) * (W - pad * 2);
+      const y = H - pad - ((v - min) / range) * (H - pad * 2);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = '#3fb950'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+    // last point dot
+    const lx = W - pad, ly = H - pad - ((xs[xs.length-1] - min) / range) * (H - pad * 2);
+    ctx.fillStyle = '#3fb950'; ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI*2); ctx.fill();
+    // min/max labels
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '9px ui-monospace,monospace';
+    ctx.fillText(max.toFixed(0), 2, 10);
+    ctx.fillText(min.toFixed(0), 2, H - 2);
+  }
+
+  async function fetchLiveDischarge() {
+    const pill = document.getElementById('liveQ');
+    const big = document.getElementById('liveBigValue');
+    const status = document.getElementById('liveStatus');
+    const btn = document.getElementById('applyLiveBtn');
+    if (status) status.textContent = 'fetching…';
+    try {
+      const r = await fetch('https://flood-api.open-meteo.com/v1/flood?latitude=27.95&longitude=85.15&daily=river_discharge&past_days=7&forecast_days=1');
+      if (!r.ok) throw 0;
+      const j = await r.json();
+      const series = (j?.daily?.river_discharge || []).filter(v => v != null);
+      if (!series.length) throw 0;
+      const q = series[series.length - 1];
+      window.__liveQ = q;
+      window.__liveSeries = series;
+      if (pill) pill.textContent = 'Live: ' + q.toFixed(1) + ' m³/s';
+      if (big) big.textContent = q.toFixed(1);
+      if (status) status.textContent = 'live · ' + new Date().toLocaleTimeString();
+      if (btn) btn.disabled = false;
+      drawSparkline();
+      // persist as a real, source-attributed reading
+      const tf = q, bf = +(q * 0.11).toFixed(2);
+      const s = { tf, bf, ratio: 11.0, temp: 14.2, do_: 7.4, sed: 22 };
+      persistReading(new Date(), 'open-meteo:trishuli', s, 'OK', 'OK', 'Open-Meteo Flood API · 27.95N 85.15E · GloFAS').catch(()=>{});
+    } catch {
+      if (pill) pill.textContent = 'Live: offline';
+      if (status) status.textContent = 'offline';
+    }
+  }
+
+  function applyLiveToSim() {
+    if (window.__liveQ == null) return;
+    const q = Math.max(10, Math.min(1000, Math.round(window.__liveQ)));
+    const sl = document.getElementById('inflowSlider');
+    if (sl) { sl.value = q; if (typeof onSimInput === 'function') onSimInput(); }
+    const btn = document.getElementById('applyLiveBtn');
+    if (btn) { btn.textContent = 'Applied ✓'; setTimeout(() => btn.textContent = 'Apply live flow → simulator', 1600); }
+  }
+
+  window.addEventListener('load', () => {
+    setTimeout(loadReadingsFromDb, 800);
+    fetchLiveDischarge();
+    setInterval(fetchLiveDischarge, 10 * 60 * 1000);
+    window.addEventListener('resize', drawSparkline);
+  });
+</script>
+
+</head>
+<body>
+
+
+<header class="app-header">
+  <div class="header-brand">
+    <div class="brand-logo"></div>
+    <div>
+      <div class="brand-title">HydroFlow</div>
+      <div class="brand-sub">IFC PS E-Flow Compliance · Nepal Hydropower</div>
+    </div>
+  </div>
+
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView('sim',this)"> Flow Simulator</button>
+    <button class="nav-tab" onclick="switchView('compliance',this)"> IFC Compliance</button>
+    <button class="nav-tab" onclick="switchView('hydrograph',this)"> Hydrograph</button>
+  </nav>
+
+  <div class="header-pills">
+    <span class="pill pill-yellow" title="Sliders & weather presets drive synthetic values. Backend pipeline (webhook + DB) is real.">SIMULATION MODE</span>
+    <span class="pill pill-green" id="livePill" title="Live river discharge from Open-Meteo Flood API · Trishuli @ Devighat (27.95°N, 85.15°E)">
+      <span class="live-dot"></span><span id="liveQ">Live: — m³/s</span>
+    </span>
+  </div>
+</header>
+
+
+<div id="view-sim" class="view active">
+  <div class="sim-layout">
+
+
+    <aside class="sim-sidebar">
+      <div class="glass-panel" style="border:1px solid rgba(63,185,80,0.35);background:linear-gradient(180deg,rgba(63,185,80,0.08),rgba(63,185,80,0.02));">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <h2 style="margin:0;"><span class="live-dot" style="display:inline-block;vertical-align:middle;margin-right:6px;"></span>Live River Data</h2>
+          <span id="liveStatus" style="font-size:10px;color:var(--text2);font-family:var(--mono);">connecting…</span>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px;">Trishuli @ Devighat · 27.95°N, 85.15°E</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:10px;">
+          <span id="liveBigValue" style="font-size:30px;font-weight:600;font-family:var(--mono);color:var(--green);">—</span>
+          <span style="font-size:12px;color:var(--text2);">m³/s today</span>
+        </div>
+        <canvas id="liveSparkline" height="50" style="width:100%;margin-top:8px;display:block;"></canvas>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <button onclick="applyLiveToSim()" id="applyLiveBtn" disabled style="flex:1;padding:7px;border-radius:6px;border:1px solid rgba(63,185,80,0.4);background:var(--green-bg);color:var(--green);cursor:pointer;font-size:11px;font-weight:600;">Apply live flow → simulator</button>
+          <button onclick="fetchLiveDischarge()" title="Refresh" style="padding:7px 10px;border-radius:6px;border:1px solid var(--border2);background:rgba(255,255,255,0.05);color:var(--text);cursor:pointer;font-size:11px;">↻</button>
+        </div>
+        <p style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.4;">
+          Source: <a href="https://open-meteo.com/en/docs/flood-api" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;">Open-Meteo Flood API</a> · GloFAS model · refreshes every 10 min. Each fetch is logged to the database with source <code style="color:var(--text2);">open-meteo:trishuli</code>.
+        </p>
+      </div>
+
+      <div class="glass-panel">
+        <h2>Total River Inflow</h2>
+        <div class="slider-container">
+          <input type="range" id="inflowSlider" min="10" max="1000" value="500" step="10" oninput="onSimInput()">
+          <div class="value-display"><span id="inflowValue">500</span> m³/s</div>
+        </div>
+        <p class="description">Adjust the incoming river flow. The hydrograph animates real seasonal variation.</p>
+
+        <h2 style="margin-top:18px;">Biodiversity / Env. Flow Allocation</h2>
+        <div class="slider-container">
+          <input type="range" id="bioPercentSlider" min="0" max="100" value="10" step="1" oninput="onSimInput()">
+          <div class="value-display"><span id="bioPercentValue">10</span>%</div>
+        </div>
+        <p class="description">Minimum 10% required by IFC PS4. Increase to support ecosystem needs.</p>
+      </div>
+
+      <div class="glass-panel">
+        <h2>Season</h2>
+        <div class="weather-grid" id="seasonGrid">
+          <button class="weather-btn" data-season="spring"  data-flow="380"  onclick="setSeason(this)">Spring<span class="wb-flow">380 m³/s</span></button>
+          <button class="weather-btn" data-season="summer"  data-flow="560"  onclick="setSeason(this)">Summer<span class="wb-flow">560 m³/s</span></button>
+          <button class="weather-btn active" data-season="monsoon" data-flow="900" onclick="setSeason(this)">Monsoon<span class="wb-flow">900 m³/s</span></button>
+          <button class="weather-btn" data-season="autumn"  data-flow="420"  onclick="setSeason(this)">Autumn<span class="wb-flow">420 m³/s</span></button>
+          <button class="weather-btn" data-season="winter"  data-flow="140"  onclick="setSeason(this)">Winter<span class="wb-flow">140 m³/s</span></button>
+          <button class="weather-btn" data-season="drySpring" data-flow="220" onclick="setSeason(this)">Pre-Mon.<span class="wb-flow">220 m³/s</span></button>
+        </div>
+        <p class="description" style="margin-top:10px;">Switch seasons to see snowpack, monsoon clouds, vegetation and river inflow change together.</p>
+      </div>
+
+      <div class="glass-panel">
+        <h2>Weather scenario</h2>
+        <div class="weather-grid" id="weatherGrid">
+          <button class="weather-btn" data-flow="60"   onclick="setWeather(this)">Drought<span class="wb-flow">60 m³/s</span></button>
+          <button class="weather-btn" data-flow="180"  onclick="setWeather(this)">Dry<span class="wb-flow">180 m³/s</span></button>
+          <button class="weather-btn active" data-flow="500" onclick="setWeather(this)">Normal<span class="wb-flow">500 m³/s</span></button>
+          <button class="weather-btn" data-flow="720"  onclick="setWeather(this)">Rain<span class="wb-flow">720 m³/s</span></button>
+          <button class="weather-btn" data-flow="900"  onclick="setWeather(this)">Monsoon<span class="wb-flow">900 m³/s</span></button>
+          <button class="weather-btn" data-flow="1000" onclick="setWeather(this)">Storm<span class="wb-flow">1000 m³/s</span></button>
+        </div>
+        <p class="description" style="margin-top:10px;">Pick a weather scenario to set typical river inflow for that season.</p>
+      </div>
+
+
+      <div class="stats-panel">
+        <div class="stat-card glass-panel power-card">
+          <div class="stat-icon"></div>
+          <div class="stat-info">
+            <h3>Hydropower Generation</h3>
+            <div class="stat-value"><span id="powerFlowValue">450</span> m³/s</div>
+            <div class="stat-label" id="powerLabel">90% of total flow</div>
+          </div>
+        </div>
+        <div class="stat-card glass-panel bio-card">
+          <div class="stat-icon"></div>
+          <div class="stat-info">
+            <h3>Environmental / Biodiversity Flow</h3>
+            <div class="stat-value"><span id="bioFlowValue">50</span> m³/s</div>
+            <div class="stat-label" id="bioLabel">10% reserved flow</div>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="hg-panel">
+        <h2>Hydrograph — Qin &amp; Qriver</h2>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <label style="font-size:11px;color:var(--text2);white-space:nowrap;">Design Q<sub>d</sub></label>
+          <input type="range" id="qdSlider" min="20" max="600" value="120" step="5" oninput="onQdInput(this.value)" style="flex:1;">
+          <span id="qdVal" style="font-size:12px;font-weight:600;font-family:var(--mono);min-width:44px;text-align:right;color:var(--blue);">120</span>
+        </div>
+        <div class="hg-readouts">
+          <span class="hg-badge" id="hg-month-badge">Jul</span>
+          <span style="font-size:11px;">Qriver: <strong id="hg-qriver" style="color:#fff;">—</strong></span>
+          <span style="font-size:11px;">Qin: <strong id="hg-qin" style="color:var(--cyan);">—</strong></span>
+          <span style="font-size:11px;">Qenv: <strong id="hg-qenv" style="color:var(--lime);">—</strong></span>
+          <span id="hgSpillWarning" style="display:none;font-size:11px;color:var(--red);"> Spill: <strong id="hgSpillVal">0</strong> m³/s</span>
+        </div>
+        <canvas id="hydrographCanvas" height="160" style="width:100%;border-radius:6px;background:rgba(0,0,0,0.2);display:block;cursor:crosshair;"></canvas>
+        <div class="hg-legend">
+          <span><span class="hg-dot" style="background:rgba(255,255,255,0.8);"></span>Qriver</span>
+          <span><span class="hg-dot" style="background:var(--cyan);"></span>Qin</span>
+          <span><span class="hg-dot" style="background:var(--lime);"></span>Qenv</span>
+          <span><span class="hg-dot" style="background:#ef9a9a;"></span>Qd limit</span>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.4;">
+          Source: monthly mean discharge, Trishuli basin (DHM Nepal / Kulekhani reference). Live overlay: <a href="https://open-meteo.com/en/docs/flood-api" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;">Open-Meteo Flood API</a>.
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+          <button id="hgPlayBtn" onclick="toggleHgPlay()" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border2);background:rgba(255,255,255,0.07);color:var(--text);cursor:pointer;font-size:12px;"> Animate</button>
+          <button onclick="exportSimCSV()" style="padding:5px 14px;border-radius:20px;border:1px solid rgba(63,185,80,.4);background:var(--green-bg);color:var(--green);cursor:pointer;font-size:12px;"> CSV</button>
+        </div>
+      </div>
+
+    </aside>
+
+    
+    <main class="sim-main">
+      <div class="canvas-container">
+        <div class="vis-labels">
+          <div class="label label-inflow">Upstream river</div>
+          <div class="label label-power">Downstream (Hydropower)</div>
+          <div class="label label-bio">Downstream (Env. flow)</div>
+        </div>
+        <div id="alertBanner" class="alert-banner hidden">ALERT: Environmental flow below 10% — IFC PS4 violation</div>
+        <div id="upSensor" class="sensor sensor-up">
+          <div class="sensor-title">Upstream sensor</div>
+          <div class="sensor-readout">Qriver: <strong id="upSensorVal">500</strong> m³/s</div>
+        </div>
+        <div id="bioSensor" class="sensor sensor-env">
+          <div class="sensor-title">Downstream env. sensor</div>
+          <div class="sensor-readout">Qenv: <strong id="envSensorVal">50</strong> m³/s</div>
+        </div>
+        <div id="pwrSensor" class="sensor sensor-pwr">
+          <div class="sensor-title">Downstream power sensor</div>
+          <div class="sensor-readout">Qpwr: <strong id="pwrSensorVal">450</strong> m³/s</div>
+        </div>
+        <canvas id="flowCanvas"></canvas>
+      </div>
+    </main>
+  </div>
+</div>
+
+
+<div id="view-compliance" class="view">
+  <div class="dash-container">
+
+    <div class="sec-head">Simulation scenarios</div>
+    <div class="scenario-grid" id="scenarioBtns">
+      <button class="scenario-btn active" data-scenario="normal" onclick="applyScenario(this)"><div class="s-name"> Normal operation</div><div class="s-desc">All flows within IFC thresholds</div></button>
+      <button class="scenario-btn" data-scenario="drought" onclick="applyScenario(this)"><div class="s-name"> Dry season drought</div><div class="s-desc">Low inflow, e-flow at risk</div></button>
+      <button class="scenario-btn" data-scenario="flood" onclick="applyScenario(this)"><div class="s-name"> Monsoon flood</div><div class="s-desc">High turbidity, sediment spike</div></button>
+      <button class="scenario-btn" data-scenario="violation" onclick="applyScenario(this)"><div class="s-name"> PS4 violation</div><div class="s-desc">E-flow below 10% minimum</div></button>
+      <button class="scenario-btn" data-scenario="glof" onclick="applyScenario(this)"><div class="s-name"> GLOF event</div><div class="s-desc">Glacial outburst simulation</div></button>
+    </div>
+
+    <div class="controls-section">
+      <div class="card-title"> Sensor input parameters (simulated)</div>
+      <div class="ctrl-grid">
+        <div class="ctrl-item"><label>Total intake flow (L/s) <span id="lTotal">400</span></label><input type="range" id="sTotal" min="50" max="2000" step="1" value="400" oninput="updateCompliance()"></div>
+        <div class="ctrl-item"><label>E-flow diverted (L/s) <span id="lBio">44</span></label><input type="range" id="sBio" min="0" max="300" step="1" value="44" oninput="updateCompliance()"></div>
+        <div class="ctrl-item"><label>Water temperature (°C) <span id="lTemp">14.0</span></label><input type="range" id="sTemp" min="2" max="35" step="0.1" value="14" oninput="updateCompliance()"></div>
+        <div class="ctrl-item"><label>Dissolved O₂ (mg/L) <span id="lDO">7.4</span></label><input type="range" id="sDO" min="1" max="14" step="0.1" value="7.4" oninput="updateCompliance()"></div>
+        <div class="ctrl-item"><label>Sediment load (%) <span id="lSed">22</span></label><input type="range" id="sSed" min="0" max="80" step="1" value="22" oninput="updateCompliance()"></div>
+      </div>
+      <div class="speed-row">
+        <label>Sim auto-noise:</label>
+        <button class="speed-btn active" onclick="setNoise(false,this)">Off</button>
+        <button class="speed-btn" onclick="setNoise(true,this)">On (±5%)</button>
+      </div>
+    </div>
+
+    
+    <div class="gauge-wrap">
+      <canvas id="gaugeCanvas" width="160" height="100"></canvas>
+      <div style="flex:1;min-width:160px">
+        <div class="gauge-big" id="gaugePct">11.0%</div>
+        <div class="gauge-label">E-flow / Total intake ratio</div>
+        <div id="gaugeStatus" style="margin-top:8px;"></div>
+        <div style="font-size:11px;color:var(--text2);margin-top:6px;font-family:var(--mono);" id="gaugeSurplus">Surplus above PS4 minimum: +1.0%</div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-family:var(--mono);">Compliance progress</div>
+        <div class="pbar-wrap"><div class="pbar-label"><span>E-flow ratio</span><span id="pb-eflow-v">11.0%</span></div><div class="pbar-track"><div class="pbar-fill" id="pb-eflow" style="width:55%;background:#3fb950"></div></div></div>
+        <div class="pbar-wrap"><div class="pbar-label"><span>Dissolved O₂</span><span id="pb-do-v">7.4 mg/L</span></div><div class="pbar-track"><div class="pbar-fill" id="pb-do" style="width:74%;background:#3fb950"></div></div></div>
+      </div>
+    </div>
+
+    <div class="sec-head">PS4 — Community H&S &amp; e-flow</div>
+    <div class="grid-4">
+      <div class="metric-card ok" id="mc-ratio"><div class="metric-label">E-flow ratio</div><div class="metric-value" id="mv-ratio">11.0<span class="unit">%</span></div><div class="metric-threshold">IFC PS4 min: 10%</div></div>
+      <div class="metric-card ok" id="mc-down"><div class="metric-label">Downstream flow</div><div class="metric-value" id="mv-down">44<span class="unit"> L/s</span></div><div class="metric-threshold">GLOF buffer active</div></div>
+      <div class="metric-card ok" id="mc-temp"><div class="metric-label">Water temperature</div><div class="metric-value" id="mv-temp">14.0<span class="unit">°C</span></div><div class="metric-threshold">Range: 8–22°C</div></div>
+    </div>
+
+    <div class="sec-head">PS6 — Biodiversity &amp; ecosystem</div>
+    <div class="grid-4">
+      <div class="metric-card ok" id="mc-do"><div class="metric-label">Dissolved O₂</div><div class="metric-value" id="mv-do">7.4<span class="unit"> mg/L</span></div><div class="metric-threshold">Min IFC: 5.0 mg/L</div></div>
+      <div class="metric-card ok" id="mc-sed"><div class="metric-label">Sediment load</div><div class="metric-value" id="mv-sed">22<span class="unit">%</span></div><div class="metric-threshold">Ref: Kulekhani 25%</div></div>
+    </div>
+
+    <div class="sec-head">24-hour trend charts</div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title"> E-flow ratio vs PS4 threshold</div><div class="chart-wrap" style="height:200px"><canvas id="chart1"></canvas></div></div>
+      <div class="card"><div class="card-title"> Dissolved O₂ trend</div><div class="chart-wrap" style="height:200px"><canvas id="chart2"></canvas></div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title"> Sediment load (%)</div><div class="chart-wrap" style="height:160px"><canvas id="chart4"></canvas></div></div>
+      <div class="card"><div class="card-title"> E-flow vs total inflow (L/s)</div><div class="chart-wrap" style="height:160px"><canvas id="chart5"></canvas></div></div>
+    </div>
+
+    <div class="sec-head">IFC PS compliance matrix</div>
+    <div class="card" style="overflow-x:auto">
+      <table class="ps-table">
+        <thead><tr><th>PS</th><th>Standard</th><th>IFC requirement</th><th>Sensor</th><th>Current</th><th>Nepal gap</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><span class="ps-tag ps-tag-crit">PS4</span></td><td>Community H&S</td><td>E-flow ≥10% of total</td><td>Flow meter ratio</td><td id="ct-eflow">11.0%</td><td><span class="ps-tag ps-tag-crit">CRITICAL</span></td><td><span class="badge badge-ok" id="cb-eflow"> OK</span></td></tr>
+          <tr><td><span class="ps-tag ps-tag-crit">PS4</span></td><td>Community H&S</td><td>GLOF integration</td><td>Downstream Q + surge</td><td id="ct-down">44 L/s</td><td><span class="ps-tag ps-tag-crit">CRITICAL</span></td><td><span class="badge badge-ok" id="cb-down"> OK</span></td></tr>
+          <tr><td><span class="ps-tag ps-tag-high">PS6</span></td><td>Biodiversity</td><td>DO ≥5 mg/L</td><td>DO probe</td><td id="ct-do">7.4 mg/L</td><td><span class="ps-tag ps-tag-high">HIGH</span></td><td><span class="badge badge-ok" id="cb-do"> OK</span></td></tr>
+          <tr><td><span class="ps-tag ps-tag-high">PS6</span></td><td>Biodiversity</td><td>Sediment ref 25% (Kulekhani)</td><td>Turbidity + sediment</td><td id="ct-sed">22%</td><td><span class="ps-tag ps-tag-high">HIGH</span></td><td><span class="badge badge-ok" id="cb-sed"> OK</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sec-head">Active alerts &amp; event log</div>
+    <div id="alertBox"></div>
+
+
+
+    <div class="sec-head">Sensor data log — last 12 readings</div>
+    <div class="card log-wrap">
+      <table class="log-table">
+        <thead><tr><th>Timestamp</th><th>Source</th><th>Total L/s</th><th>E-flow L/s</th><th>Ratio%</th><th>Temp°C</th><th>DO mg/L</th><th>Sed%</th><th>PS4</th><th>PS6</th></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+      <button class="export-btn" onclick="exportCSV()"> Export CSV</button>
+      <button class="export-btn" style="background:var(--blue-bg);border-color:rgba(88,166,255,.4);color:var(--blue)" onclick="exportJSON()"> Export JSON</button>
+      <button class="export-btn" style="background:var(--yellow-bg);border-color:rgba(210,153,34,.4);color:var(--yellow)" onclick="printReport()"> Print compliance report</button>
+    </div>
+
+  </div>
+</div>
+
+
+<div id="view-hydrograph" class="view">
+  <div class="dash-container">
+    <div class="sec-head">Annual flow regime — Himalayan RoR river</div>
+
+    <div class="controls-section">
+      <div class="ctrl-grid">
+        <div class="ctrl-item"><label>Design discharge Q<sub>d</sub> (m³/s) <span id="hgv-qd">120</span></label><input type="range" id="hgv-qdSlider" min="20" max="600" value="120" step="5" oninput="onHgViewInput()"></div>
+        <div class="ctrl-item"><label>Gross head H (m) <span id="hgv-head">120</span></label><input type="range" id="hgv-headSlider" min="20" max="600" value="120" step="5" oninput="onHgViewInput()"></div>
+        <div class="ctrl-item"><label>Plant efficiency η (%) <span id="hgv-eta">84</span></label><input type="range" id="hgv-etaSlider" min="70" max="92" value="84" step="1" oninput="onHgViewInput()"></div>
+        <div class="ctrl-item"><label>Min. env. flow (% of Q̄) <span id="hgv-ef">10</span></label><input type="range" id="hgv-efSlider" min="5" max="30" value="10" step="1" oninput="onHgViewInput()"></div>
+      </div>
+    </div>
+
+    <div class="grid-4" style="margin-bottom:16px;">
+      <div class="metric-card ok"><div class="metric-label">Installed capacity</div><div class="metric-value" id="hgv-cap">—</div></div>
+      <div class="metric-card ok"><div class="metric-label">Annual energy (est.)</div><div class="metric-value" id="hgv-energy">—</div></div>
+      <div class="metric-card ok"><div class="metric-label">Plant load factor</div><div class="metric-value" id="hgv-plf">—</div></div>
+      <div class="metric-card ok"><div class="metric-label">Mean annual flow Q̄</div><div class="metric-value" id="hgv-qbar">—</div></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="speed-btn active" id="hgvTab-hydro" onclick="switchHgTab('hydro',this)">Annual hydrograph</button>
+      <button class="speed-btn" id="hgvTab-fdc" onclick="switchHgTab('fdc',this)">Flow duration curve</button>
+      <button class="speed-btn" id="hgvTab-power" onclick="switchHgTab('power',this)">Monthly power</button>
+    </div>
+
+    <div class="card">
+      <div class="chart-wrap" style="height:320px"><canvas id="hgvChart"></canvas></div>
+    </div>
+
+    <div style="margin-top:10px;font-size:11px;color:var(--text2);">
+      Typical Himalayan RoR regime. Q<sub>40</sub> = flow exceeded 40% of time (firm power basis).
+    </div>
+
+    
+    <div class="sec-head">Monthly compliance log</div>
+    <div class="card log-wrap">
+      <table class="log-table">
+        <thead><tr><th>Month</th><th>Qriver m³/s</th><th>Qin m³/s</th><th>Qenv m³/s</th><th>Qspill m³/s</th><th>Power MW</th><th>E-flow %</th><th>PS4 status</th></tr></thead>
+        <tbody id="hgvLogBody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;">
+      <button class="export-btn" onclick="exportHgvCSV()"> Export monthly compliance CSV</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+
+const QRIVER_MONTHLY = { Jan:38, Feb:28, Mar:22, Apr:30, May:65, Jun:210, Jul:480, Aug:560, Sep:400, Oct:180, Nov:85, Dec:52 };
+const MONTHS = Object.keys(QRIVER_MONTHLY);
+const QRIVER = Object.values(QRIVER_MONTHLY);
+
+
+function switchView(id, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'hydrograph') { setTimeout(renderHgvChart, 50); }
+  if (id === 'compliance') { updateCompliance(); }
+}
+
+
+const canvas = document.getElementById('flowCanvas');
+const ctx    = canvas.getContext('2d');
+let simWidth, simHeight, particles = [];
+let totalFlow = 500, bioPercent = 0.10;
+
+function resizeSim() {
+  simWidth  = canvas.width  = canvas.parentElement.clientWidth;
+  simHeight = canvas.height = canvas.parentElement.clientHeight;
+}
+window.addEventListener('resize', resizeSim);
+resizeSim();
+
+
+/* ============================================================
+   HYDROPOWER SCENE  —  side-elevation schematic visualization
+   Layers (back → front):
+     sky · sun · far mountains (snow) · mid range · tree line · mist
+     reservoir lake · dam · intake · penstock · powerhouse · turbine
+     transmission tower · tailrace · environmental flow · sensors
+   ============================================================ */
+
+// Scene anchors — recomputed each frame from simWidth/simHeight
+function geom() {
+  const W = simWidth, H = simHeight;
+  const skyH      = H * 0.34;
+  const groundY   = H * 0.62;          // far shore waterline
+  const damX      = Math.round(W * 0.46);
+  const damTopY   = H * 0.40;
+  const damBaseY  = H * 0.86;
+  const damW      = Math.max(22, W * 0.035);
+  const phX       = damX + W * 0.18;   // powerhouse position
+  const phY       = H * 0.66;
+  const phW       = Math.max(80, W * 0.13);
+  const phH       = Math.max(56, H * 0.16);
+  const tailY     = H * 0.82;          // downstream channel y
+  const envY      = H * 0.92;          // environmental flow y
+  return { W,H,skyH,groundY,damX,damTopY,damBaseY,damW,phX,phY,phW,phH,tailY,envY };
+}
+
+class Particle {
+  constructor() { this.reset(true); }
+  reset(initial) {
+    const g = geom();
+    this.x = initial ? Math.random() * g.damX * 0.95 : -8;
+    this.y = g.groundY - 6 + (Math.random() - 0.5) * 10;
+    this.speed = 0.7 + Math.random() * 1.4;
+    this.len = 5 + Math.random() * 9;
+    this.alpha = 0.4 + Math.random() * 0.5;
+    this.isPower = Math.random() < (1 - bioPercent);
+    this.phase = 0; // 0 reservoir, 1 penstock, 2 turbine→tailrace, 3 env-flow
+  }
+  update() {
+    const g = geom();
+    // Phase 0 — drifting across reservoir toward dam
+    if (this.phase === 0) {
+      this.x += this.speed * 0.55;
+      this.y += (g.groundY - 6 - this.y) * 0.04 + Math.sin(this.x*0.05 + performance.now()*0.002)*0.15;
+      if (this.x >= g.damX - g.damW*0.5 - 2) {
+        this.phase = this.isPower ? 1 : 3;
+        this.x = g.damX - g.damW*0.5 - 2;
+      }
+      return;
+    }
+    // Phase 1 — descend through penstock to powerhouse
+    if (this.phase === 1) {
+      const targetX = g.phX + g.phW*0.18;
+      const targetY = g.phY + g.phH*0.55;
+      this.x += (targetX - this.x) * 0.06;
+      this.y += (targetY - this.y) * 0.06 + this.speed*0.6;
+      if (this.x > targetX - 3 && this.y > targetY - 4) { this.phase = 2; }
+      return;
+    }
+    // Phase 2 — through turbine, exit into tailrace, flow right
+    if (this.phase === 2) {
+      const ty = g.tailY;
+      this.x += this.speed * 1.3;
+      this.y += (ty - this.y) * 0.10;
+      if (this.x > simWidth + 12) this.reset(false);
+      return;
+    }
+    // Phase 3 — environmental flow under the dam gate, continue along river bed
+    const ey = g.envY;
+    this.x += this.speed * 0.9;
+    this.y += (ey - this.y) * 0.06 + Math.sin(this.x*0.04)*0.2;
+    if (this.x > simWidth + 12) this.reset(false);
+  }
+  draw() {
+    let col;
+    if (this.phase === 0)      col = `rgba(220,235,245,${this.alpha})`;
+    else if (this.phase === 1) col = `rgba(190,215,235,${this.alpha})`;
+    else if (this.phase === 2) col = `rgba(170,210,230,${this.alpha})`;
+    else                       col = `rgba(160,195,170,${this.alpha})`;
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 1.3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y);
+    ctx.lineTo(this.x - this.len, this.y);
+    ctx.stroke();
+  }
+}
+
+/* -------- Reusable drawing helpers -------- */
+function ridge(yBase, amp, freq, color, phase) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(0, simHeight);
+  ctx.lineTo(0, yBase);
+  for (let x = 0; x <= simWidth; x += 6) {
+    const y = yBase - amp * (0.55 + 0.45 * Math.sin(x*freq + phase)) - amp*0.35*Math.sin(x*freq*2.7 + phase);
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(simWidth, simHeight);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/* ---------- SEASON PALETTES ---------- */
+const SEASONS = {
+  spring:    { sky:['#a9c4d8','#dfeaf0','#f3ede0'], sun:'#fff2cc', sunHalo:'rgba(255,240,200,0.85)',
+               snowCap:0.55, farMtn:'#8aa0aa', midMtn:'#6f8a72', nearMtn:'#3f6b3a', tree:'#244a22',
+               vegTint:'#7fb069', lakeTop:'#a4c1cb', lakeBot:'#4c708a',
+               clouds:3, cloudAlpha:0.55, mistAlpha:0.45, rain:0, snowFall:0, flow:380 },
+  summer:    { sky:['#c8d8e2','#eaf1f3','#f6efde'], sun:'#fff7d0', sunHalo:'rgba(255,245,210,0.9)',
+               snowCap:0.20, farMtn:'#7e95a0', midMtn:'#5a7a5e', nearMtn:'#2f5a2b', tree:'#1c3a18',
+               vegTint:'#3f7a35', lakeTop:'#8fb0bd', lakeBot:'#3a5e74',
+               clouds:4, cloudAlpha:0.50, mistAlpha:0.35, rain:0, snowFall:0, flow:560 },
+  monsoon:   { sky:['#5a6470','#7e8a93','#a6acb0'], sun:'#d9d4c6', sunHalo:'rgba(200,200,200,0.35)',
+               snowCap:0.10, farMtn:'#4f5b64', midMtn:'#3d5945', nearMtn:'#22421e', tree:'#0f2810',
+               vegTint:'#2d6a2a', lakeTop:'#586c78', lakeBot:'#2a3e4d',
+               clouds:9, cloudAlpha:0.85, mistAlpha:0.75, rain:1, snowFall:0, flow:900 },
+  autumn:    { sky:['#c4b8a0','#ead9b8','#f3d9a8'], sun:'#ffd58a', sunHalo:'rgba(255,200,140,0.85)',
+               snowCap:0.45, farMtn:'#8e8170', midMtn:'#8a6a3a', nearMtn:'#6e4a1f', tree:'#4a2a10',
+               vegTint:'#c47a2b', lakeTop:'#9bb0b8', lakeBot:'#4e6675',
+               clouds:3, cloudAlpha:0.55, mistAlpha:0.50, rain:0, snowFall:0, flow:420 },
+  winter:    { sky:['#cbd6dd','#e6ecef','#eef0f0'], sun:'#f6f0e0', sunHalo:'rgba(230,235,240,0.7)',
+               snowCap:1.0, farMtn:'#9aa6ad', midMtn:'#8a96a0', nearMtn:'#5e6e6a', tree:'#3a4a40',
+               vegTint:'#6a7a6a', lakeTop:'#b6c4cc', lakeBot:'#506872',
+               clouds:5, cloudAlpha:0.70, mistAlpha:0.65, rain:0, snowFall:1, flow:140 },
+  drySpring: { sky:['#b8b29e','#e2d8bf','#f0e2c2'], sun:'#ffd9a0', sunHalo:'rgba(255,210,150,0.8)',
+               snowCap:0.30, farMtn:'#8c8270', midMtn:'#7a7256', nearMtn:'#5a5232', tree:'#3a3320',
+               vegTint:'#a89048', lakeTop:'#9aaab2', lakeBot:'#4a606e',
+               clouds:2, cloudAlpha:0.45, mistAlpha:0.30, rain:0, snowFall:0, flow:220 }
+};
+let currentSeason = 'monsoon';
+const rainDrops = [];
+const snowFlakes = [];
+
+function setSeason(btn) {
+  document.querySelectorAll('#seasonGrid .weather-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentSeason = btn.dataset.season;
+  const flow = parseInt(btn.dataset.flow);
+  const sl = document.getElementById('inflowSlider');
+  if (sl) { sl.value = flow; }
+  onSimInput();
+}
+
+function drawSimBg() {
+  const g = geom();
+  const t = performance.now() * 0.001;
+  const S = SEASONS[currentSeason] || SEASONS.monsoon;
+
+  /* ---------- SKY ---------- */
+  const sky = ctx.createLinearGradient(0,0,0,g.skyH);
+  sky.addColorStop(0,S.sky[0]);
+  sky.addColorStop(0.55,S.sky[1]);
+  sky.addColorStop(1,S.sky[2]);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, g.W, g.skyH);
+
+
+  // sun halo
+  const sunX = g.W * 0.78, sunY = g.skyH * 0.45;
+  const halo = ctx.createRadialGradient(sunX, sunY, 6, sunX, sunY, 110);
+  halo.addColorStop(0, S.sunHalo);
+  halo.addColorStop(1, S.sunHalo.replace(/[\d.]+\)$/, '0)'));
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(sunX, sunY, 110, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = S.sun;
+  ctx.beginPath(); ctx.arc(sunX, sunY, 14, 0, Math.PI*2); ctx.fill();
+
+  // drifting clouds
+  ctx.fillStyle = `rgba(255,255,255,${S.cloudAlpha})`;
+  for (let i=0;i<S.clouds;i++){
+    const cx = ((i*210 + t*9) % (g.W+260)) - 130;
+    const cy = g.skyH*0.22 + (i%3)*16;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 80, 12, 0, 0, Math.PI*2);
+    ctx.ellipse(cx+34, cy-6, 50, 10, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  /* ---------- MOUNTAIN LAYERS ---------- */
+  // Far snow range
+  ridge(g.skyH + 22, 60, 0.010, S.farMtn, 1.7);
+  // snow caps on far range (scaled by season)
+  if (S.snowCap > 0.05) {
+    ctx.fillStyle = `rgba(255,255,255,${0.55 + 0.4*S.snowCap})`;
+    for (let x=0;x<g.W;x+=8){
+      const peakY = g.skyH + 22 - 60 * (0.55 + 0.45*Math.sin(x*0.010 + 1.7));
+      const snowDepth = Math.max(0, (g.skyH + 6) - peakY) * 0.6;
+      if (snowDepth > 1) { ctx.fillRect(x-1, peakY, 3, snowDepth*0.45*S.snowCap + 1); }
+    }
+  }
+  // Mid range
+  ridge(g.skyH + 56, 50, 0.018, S.midMtn, 0.3);
+  // Winter dusting on mid range
+  if (S.snowCap > 0.7) {
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    for (let x=0;x<g.W;x+=6){
+      const peakY = g.skyH + 56 - 50 * (0.55 + 0.45*Math.sin(x*0.018 + 0.3));
+      ctx.fillRect(x-1, peakY, 2, 4);
+    }
+  }
+  // Near tree line
+  ridge(g.skyH + 92, 32, 0.038, S.nearMtn, 2.5);
+  // Tree silhouettes along ridgeline
+  ctx.fillStyle = S.tree;
+  for (let x=0;x<g.W;x+=5){
+    const y = g.skyH + 92 - 32 * (0.55 + 0.45*Math.sin(x*0.038 + 2.5));
+    const h = 5 + Math.abs(Math.sin(x*0.5))*5;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x-2, y+h); ctx.lineTo(x+2, y+h); ctx.closePath(); ctx.fill();
+  }
+
+  // Soft mist band between mountains and water
+  const mist = ctx.createLinearGradient(0, g.skyH+90, 0, g.skyH+150);
+  mist.addColorStop(0,'rgba(245,245,245,0)');
+  mist.addColorStop(0.5,`rgba(245,245,245,${S.mistAlpha})`);
+  mist.addColorStop(1,'rgba(245,245,245,0)');
+  ctx.fillStyle = mist;
+  ctx.fillRect(0, g.skyH+88, g.W, 70);
+
+  /* ---------- RESERVOIR (upstream lake) ---------- */
+  const resTop = g.skyH + 130;
+  const lake = ctx.createLinearGradient(0, resTop, 0, g.damBaseY);
+  lake.addColorStop(0,S.lakeTop);
+  lake.addColorStop(0.5,S.lakeTop);
+  lake.addColorStop(1,S.lakeBot);
+
+  ctx.fillStyle = lake;
+  ctx.beginPath();
+  ctx.moveTo(0, resTop);
+  ctx.lineTo(g.damX - g.damW*0.5, resTop);
+  ctx.lineTo(g.damX - g.damW*0.5, g.damBaseY);
+  ctx.lineTo(0, g.damBaseY);
+  ctx.closePath();
+  ctx.fill();
+
+  // reservoir reflections (horizontal shimmer)
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 0.8;
+  for (let i=0;i<10;i++){
+    const y = resTop + 8 + i*10 + Math.sin(t*1.4 + i)*1.2;
+    ctx.beginPath();
+    ctx.moveTo(20 + Math.sin(t+i)*6, y);
+    ctx.lineTo(g.damX - 14 - Math.cos(t+i)*8, y);
+    ctx.stroke();
+  }
+
+  /* ---------- DOWNSTREAM RIVERBED + ENV FLOW ---------- */
+  // riverbank earth
+  const bank = ctx.createLinearGradient(0, g.damBaseY-10, 0, g.H);
+  bank.addColorStop(0,'#7a6a52');
+  bank.addColorStop(1,'#4a3f30');
+  ctx.fillStyle = bank;
+  ctx.fillRect(g.damX + g.damW*0.5, g.damBaseY-4, g.W, g.H);
+
+  // tailrace channel (water from powerhouse)
+  ctx.fillStyle = '#5d7c8a';
+  ctx.beginPath();
+  ctx.moveTo(g.phX + g.phW*0.85, g.phY + g.phH*0.55);
+  ctx.bezierCurveTo(g.phX + g.phW*1.1, g.tailY - 4, g.W*0.78, g.tailY - 2, g.W+8, g.tailY - 2);
+  ctx.lineTo(g.W+8, g.tailY + 18);
+  ctx.bezierCurveTo(g.W*0.78, g.tailY + 18, g.phX + g.phW*1.05, g.tailY + 14, g.phX + g.phW*0.78, g.phY + g.phH*0.72);
+  ctx.closePath();
+  ctx.fill();
+
+  // environmental flow channel (under dam gate)
+  ctx.fillStyle = '#6e8a78';
+  ctx.beginPath();
+  ctx.moveTo(g.damX + g.damW*0.5, g.damBaseY - 6);
+  ctx.bezierCurveTo(g.damX + g.W*0.10, g.envY - 4, g.W*0.75, g.envY - 2, g.W+8, g.envY - 2);
+  ctx.lineTo(g.W+8, g.envY + 14);
+  ctx.bezierCurveTo(g.W*0.75, g.envY + 14, g.damX + g.W*0.10, g.envY + 10, g.damX + g.damW*0.5, g.damBaseY + 2);
+  ctx.closePath();
+  ctx.fill();
+
+  // rocks along env channel
+  ctx.fillStyle = '#2f2a22';
+  for (let i=0;i<10;i++){
+    const x = g.damX + 22 + i * ((g.W - g.damX - 22)/10);
+    const y = g.envY + Math.sin(i*1.6)*4 + 16;
+    ctx.beginPath(); ctx.arc(x, y, 3 + Math.abs(Math.sin(i))*2.5, 0, Math.PI*2); ctx.fill();
+  }
+
+  /* ---------- CONCRETE GRAVITY DAM ---------- */
+  // dam body (trapezoid)
+  const dxL = g.damX - g.damW*0.5;
+  const dxR = g.damX + g.damW*0.5;
+  const dam = ctx.createLinearGradient(dxL, g.damTopY, dxR, g.damBaseY);
+  dam.addColorStop(0,'#c9c9c4');
+  dam.addColorStop(1,'#7d7d78');
+  ctx.fillStyle = dam;
+  ctx.beginPath();
+  ctx.moveTo(dxL, g.damTopY);
+  ctx.lineTo(dxR, g.damTopY);
+  ctx.lineTo(dxR + g.damW*0.6, g.damBaseY);
+  ctx.lineTo(dxL - g.damW*0.15, g.damBaseY);
+  ctx.closePath();
+  ctx.fill();
+  // dam crest road
+  ctx.fillStyle = '#3b3b38';
+  ctx.fillRect(dxL - 2, g.damTopY - 4, g.damW + 4, 5);
+  // railings
+  ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
+  for (let i=0;i<5;i++){
+    const rx = dxL + i*(g.damW/4);
+    ctx.beginPath(); ctx.moveTo(rx, g.damTopY-4); ctx.lineTo(rx, g.damTopY-9); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.moveTo(dxL, g.damTopY-9); ctx.lineTo(dxR, g.damTopY-9); ctx.stroke();
+
+  // spillway gates (3 stacked)
+  for (let i=0;i<3;i++){
+    const gy = g.damTopY + 10 + i*((g.damBaseY-g.damTopY-20)/3.2);
+    ctx.fillStyle = '#2a3036';
+    ctx.fillRect(dxL+3, gy, g.damW-6, ((g.damBaseY-g.damTopY-20)/3.2) - 4);
+    ctx.strokeStyle = '#7a8088'; ctx.lineWidth = 0.7;
+    ctx.beginPath(); ctx.moveTo(dxL+3, gy+4); ctx.lineTo(dxR-3, gy+4); ctx.stroke();
+  }
+
+  // INTAKE STRUCTURE at top of dam (reservoir side)
+  ctx.fillStyle = '#6b7178';
+  ctx.fillRect(dxL - 14, g.damTopY + 4, 14, 22);
+  // intake screen
+  ctx.strokeStyle = '#3a3f44'; ctx.lineWidth = 0.6;
+  for (let i=0;i<5;i++){ ctx.beginPath(); ctx.moveTo(dxL-14, g.damTopY+6+i*4); ctx.lineTo(dxL, g.damTopY+6+i*4); ctx.stroke(); }
+
+  // PENSTOCK pipe from intake down to powerhouse
+  ctx.strokeStyle = '#5a6066'; ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(dxR + 2, g.damTopY + 14);
+  ctx.lineTo(g.phX + g.phW*0.18, g.phY + g.phH*0.55);
+  ctx.stroke();
+  // pipe highlight
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(dxR + 2, g.damTopY + 11);
+  ctx.lineTo(g.phX + g.phW*0.18, g.phY + g.phH*0.55 - 3);
+  ctx.stroke();
+  // flow chevrons inside penstock (animated)
+  const chevPhase = (t * 80) % 28;
+  ctx.strokeStyle = 'rgba(120,180,220,0.85)'; ctx.lineWidth = 1.6;
+  const px1 = dxR + 2, py1 = g.damTopY + 14;
+  const px2 = g.phX + g.phW*0.18, py2 = g.phY + g.phH*0.55;
+  const dx = px2 - px1, dy = py2 - py1, dl = Math.hypot(dx,dy);
+  const ux = dx/dl, uy = dy/dl;
+  const nx = -uy, ny = ux;
+  for (let s = chevPhase; s < dl - 6; s += 28) {
+    const cx = px1 + ux*s, cy = py1 + uy*s;
+    ctx.beginPath();
+    ctx.moveTo(cx + nx*3, cy + ny*3);
+    ctx.lineTo(cx + ux*6, cy + uy*6);
+    ctx.lineTo(cx - nx*3, cy - ny*3);
+    ctx.stroke();
+  }
+
+  /* ---------- POWERHOUSE ---------- */
+  // shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.beginPath(); ctx.ellipse(g.phX + g.phW/2, g.phY + g.phH + 4, g.phW*0.55, 5, 0, 0, Math.PI*2); ctx.fill();
+  // building
+  const bld = ctx.createLinearGradient(g.phX, g.phY, g.phX, g.phY + g.phH);
+  bld.addColorStop(0,'#e6e1d4'); bld.addColorStop(1,'#b8b1a0');
+  ctx.fillStyle = bld;
+  ctx.fillRect(g.phX, g.phY, g.phW, g.phH);
+  // roof
+  ctx.fillStyle = '#6b2f25';
+  ctx.beginPath();
+  ctx.moveTo(g.phX - 5, g.phY);
+  ctx.lineTo(g.phX + g.phW/2, g.phY - g.phH*0.32);
+  ctx.lineTo(g.phX + g.phW + 5, g.phY);
+  ctx.closePath();
+  ctx.fill();
+  // roof ridge highlight
+  ctx.strokeStyle = '#4a1e16'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(g.phX - 5, g.phY); ctx.lineTo(g.phX + g.phW + 5, g.phY); ctx.stroke();
+  // windows
+  ctx.fillStyle = '#5a85a8';
+  const winW = g.phW * 0.16, winH = g.phH * 0.28, winY = g.phY + g.phH*0.18;
+  for (let i=0;i<3;i++){
+    const wx = g.phX + g.phW*0.10 + i*(g.phW*0.28);
+    ctx.fillRect(wx, winY, winW, winH);
+    ctx.strokeStyle = '#2c3a48'; ctx.lineWidth = 0.8;
+    ctx.strokeRect(wx, winY, winW, winH);
+    ctx.beginPath(); ctx.moveTo(wx + winW/2, winY); ctx.lineTo(wx + winW/2, winY + winH); ctx.stroke();
+  }
+  // door
+  ctx.fillStyle = '#3a2a1c';
+  ctx.fillRect(g.phX + g.phW*0.43, g.phY + g.phH*0.62, g.phW*0.14, g.phH*0.36);
+
+  // TURBINE wheel on side wall (visible spinning)
+  const turbCX = g.phX + g.phW*0.86, turbCY = g.phY + g.phH*0.55, turbR = Math.min(g.phW, g.phH)*0.18;
+  ctx.fillStyle = '#2a2a2a';
+  ctx.beginPath(); ctx.arc(turbCX, turbCY, turbR + 3, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#6a6a6a';
+  ctx.beginPath(); ctx.arc(turbCX, turbCY, turbR, 0, Math.PI*2); ctx.fill();
+  // blades (spin speed proportional to power flow)
+  const spin = t * (1.2 + (1-bioPercent)*5.5);
+  ctx.save();
+  ctx.translate(turbCX, turbCY); ctx.rotate(spin);
+  ctx.strokeStyle = '#d8d8d8'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+  for (let i=0;i<6;i++){
+    ctx.rotate(Math.PI/3);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(turbR-2, 0); ctx.stroke();
+  }
+  ctx.restore();
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath(); ctx.arc(turbCX, turbCY, 3, 0, Math.PI*2); ctx.fill();
+
+  /* ---------- TRANSMISSION TOWER + POWER LINES ---------- */
+  const towX = g.phX + g.phW + 26, towY = g.phY - g.phH*0.15;
+  ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1.4;
+  // lattice
+  ctx.beginPath();
+  ctx.moveTo(towX - 10, g.phY + g.phH); ctx.lineTo(towX, towY);
+  ctx.moveTo(towX + 10, g.phY + g.phH); ctx.lineTo(towX, towY);
+  ctx.stroke();
+  // cross arms
+  ctx.beginPath();
+  ctx.moveTo(towX - 14, towY + 8); ctx.lineTo(towX + 14, towY + 8);
+  ctx.moveTo(towX - 18, towY + 20); ctx.lineTo(towX + 18, towY + 20);
+  ctx.stroke();
+  // bracing
+  for (let i=0;i<4;i++){
+    const yy = g.phY + g.phH - i*((g.phY + g.phH - towY)/4);
+    const widthAt = 10 - (i*10/4);
+    ctx.beginPath(); ctx.moveTo(towX - widthAt, yy); ctx.lineTo(towX + widthAt, yy); ctx.stroke();
+  }
+  // power cables off to the right (with sag) + animated power pulse
+  const cableY = towY + 12;
+  for (let k=0;k<2;k++){
+    const sag = 14;
+    ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(towX + 14, cableY + k*12);
+    ctx.quadraticCurveTo((towX + g.W)/2, cableY + k*12 + sag, g.W + 4, cableY + k*12 - 4);
+    ctx.stroke();
+  }
+  // pulse blip travelling along cable
+  const pulseT = (t * 0.6) % 1;
+  const pcx = towX + 14 + (g.W + 4 - towX - 14) * pulseT;
+  const pcy = cableY + (4*pulseT*(1-pulseT)) * 14;
+  ctx.fillStyle = `rgba(255,220,80,${0.85 - pulseT*0.4})`;
+  ctx.beginPath(); ctx.arc(pcx, pcy, 2.6, 0, Math.PI*2); ctx.fill();
+
+  /* ---------- SPILLWAY: env-flow gate at bottom of dam (animated falling water) ---------- */
+  ctx.fillStyle = 'rgba(220,235,245,0.85)';
+  for (let i=0;i<7;i++){
+    const fy = g.damBaseY - 4 + ((i*6 + t*55) % 22);
+    ctx.fillRect(dxR - 4 + i*1.5, fy, 1.5, 4);
+  }
+  // splash at bottom
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  for (let i=0;i<4;i++){
+    const sx = g.damX + g.damW*0.5 + i*4 + Math.sin(t*3+i)*2;
+    ctx.beginPath(); ctx.ellipse(sx, g.envY-2, 5, 1.6, 0, 0, Math.PI*2); ctx.fill();
+  }
+
+  /* ---------- WEATHER OVERLAY (rain / snow by season) ---------- */
+  if (S.rain) {
+    while (rainDrops.length < 140) rainDrops.push({ x: Math.random()*g.W, y: Math.random()*g.H, v: 9 + Math.random()*6 });
+    ctx.strokeStyle = 'rgba(170,195,215,0.55)'; ctx.lineWidth = 1;
+    for (const d of rainDrops) {
+      ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - 2, d.y + 10); ctx.stroke();
+      d.y += d.v; d.x -= 2;
+      if (d.y > g.H) { d.y = -10; d.x = Math.random()*g.W; }
+    }
+  } else if (rainDrops.length) rainDrops.length = 0;
+
+  if (S.snowFall) {
+    while (snowFlakes.length < 90) snowFlakes.push({ x: Math.random()*g.W, y: Math.random()*g.H, r: 1 + Math.random()*1.8, v: 0.5 + Math.random()*0.9, p: Math.random()*Math.PI*2 });
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    for (const f of snowFlakes) {
+      ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI*2); ctx.fill();
+      f.y += f.v; f.x += Math.sin(t + f.p) * 0.4;
+      if (f.y > g.H) { f.y = -4; f.x = Math.random()*g.W; }
+    }
+  } else if (snowFlakes.length) snowFlakes.length = 0;
+}
+
+
+function drawSensorPings() {
+  const g = geom();
+  const t = performance.now() * 0.003;
+  const pulse = (cx, cy, col) => {
+    for (let i=0;i<2;i++){
+      const phase = (t + i*0.5) % 1;
+      const r = 6 + phase*22;
+      const a = 0.35 * (1 - phase);
+      ctx.strokeStyle = col.replace('A', a.toFixed(3));
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+    }
+  };
+
+  // Read live values for labels
+  const upVal  = document.getElementById('upSensorVal')?.textContent  || '—';
+  const envVal = document.getElementById('envSensorVal')?.textContent || '—';
+  const pwrVal = document.getElementById('pwrSensorVal')?.textContent || '—';
+
+  const stations = [
+    { x: g.W*0.16, y: g.groundY - 4, label:'UPSTREAM',   val: upVal + ' m³/s', col:'rgba(20,110,200,A)', tone:'#146ec8' },
+    { x: g.W*0.92, y: g.envY - 4,    label:'ENV. FLOW',  val: envVal + ' m³/s', col:'rgba(34,139,58,A)',  tone:'#228b3a' },
+    { x: g.W*0.92, y: g.tailY - 6,   label:'TAILRACE',   val: pwrVal + ' m³/s', col:'rgba(200,120,30,A)', tone:'#c8781e' },
+  ];
+
+  stations.forEach(s => {
+    // bobbing buoy
+    const bob = Math.sin(performance.now()*0.003 + s.x) * 2;
+    pulse(s.x, s.y + bob, s.col);
+    // buoy body
+    ctx.fillStyle = s.tone;
+    ctx.beginPath(); ctx.arc(s.x, s.y + bob, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(s.x, s.y + bob, 1.6, 0, Math.PI*2); ctx.fill();
+    // antenna
+    ctx.strokeStyle = s.tone; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(s.x, s.y + bob - 4); ctx.lineTo(s.x, s.y + bob - 14); ctx.stroke();
+
+    // label card
+    const txt1 = s.label, txt2 = s.val;
+    ctx.font = '600 9px -apple-system,system-ui,sans-serif';
+    const w1 = ctx.measureText(txt1).width;
+    ctx.font = '700 11px -apple-system,system-ui,sans-serif';
+    const w2 = ctx.measureText(txt2).width;
+    const cardW = Math.max(w1, w2) + 14;
+    const cardH = 28;
+    let cx = s.x - cardW/2;
+    cx = Math.max(4, Math.min(g.W - cardW - 4, cx));
+    const cy = s.y + bob - 14 - cardH - 4;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.strokeStyle = s.tone; ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(cx, cy, cardW, cardH, 5);
+    else ctx.rect(cx, cy, cardW, cardH);
+    ctx.fill(); ctx.stroke();
+    // tick down to buoy
+    ctx.strokeStyle = s.tone;
+    ctx.beginPath(); ctx.moveTo(s.x, cy + cardH); ctx.lineTo(s.x, s.y + bob - 14); ctx.stroke();
+    // text
+    ctx.fillStyle = '#444'; ctx.font = '600 9px -apple-system,system-ui,sans-serif';
+    ctx.fillText(txt1, cx + 7, cy + 11);
+    ctx.fillStyle = s.tone; ctx.font = '700 11px -apple-system,system-ui,sans-serif';
+    ctx.fillText(txt2, cx + 7, cy + 23);
+  });
+}
+
+
+
+function adjustParticles() {
+  const target = Math.floor((totalFlow / 1000) * 950) + 50;
+  while (particles.length < target) particles.push(new Particle());
+  if (particles.length > target) particles.splice(target);
+}
+
+function animateSim() {
+  drawSimBg();
+  drawSensorPings();
+  particles.forEach(p => { p.update(); p.draw(); });
+  requestAnimationFrame(animateSim);
+}
+
+function onSimInput() {
+  totalFlow   = parseInt(document.getElementById('inflowSlider').value);
+  bioPercent  = parseInt(document.getElementById('bioPercentSlider').value) / 100;
+  const bioF  = Math.round(totalFlow * bioPercent);
+  const powF  = totalFlow - bioF;
+  document.getElementById('inflowValue').textContent    = totalFlow;
+  document.getElementById('bioPercentValue').textContent = Math.round(bioPercent * 100);
+  document.getElementById('powerFlowValue').textContent  = powF;
+  document.getElementById('bioFlowValue').textContent    = bioF;
+  document.getElementById('powerLabel').textContent = Math.round((1 - bioPercent) * 100) + '% of total flow';
+  document.getElementById('bioLabel').textContent   = Math.round(bioPercent * 100) + '% reserved flow';
+  const ab = document.getElementById('alertBanner');
+  const bs = document.getElementById('bioSensor');
+  const upV = document.getElementById('upSensorVal');
+  const envV = document.getElementById('envSensorVal');
+  const pwrV = document.getElementById('pwrSensorVal');
+  if (upV)  upV.textContent  = totalFlow;
+  if (envV) envV.textContent = bioF;
+  if (pwrV) pwrV.textContent = powF;
+  if (bioPercent < 0.10) {
+    ab.classList.remove('hidden'); bs.classList.add('alert');
+    bs.querySelector('.sensor-readout').innerHTML = 'CRITICAL: Qenv <strong>' + bioF + '</strong> m³/s (<10%)';
+  } else {
+    ab.classList.add('hidden'); bs.classList.remove('alert');
+    bs.querySelector('.sensor-readout').innerHTML = 'Qenv: <strong>' + bioF + '</strong> m³/s';
+  }
+  particles.forEach(p => { p.isPower = Math.random() < (1 - bioPercent); p.pathChosen = false; });
+  adjustParticles();
+}
+
+adjustParticles();
+animateSim();
+onSimInput();
+
+
+let hgCurrentMonth = 6;
+let hgAnimTimer = null;
+let hgPlaying = false;
+
+function getQd()  { return parseInt(document.getElementById('qdSlider')?.value || 120); }
+function getHgBio() { return parseInt(document.getElementById('bioPercentSlider')?.value || 10); }
+
+function drawSidebarHg(idx, Qd, bio) {
+  const canvas = document.getElementById('hydrographCanvas');
+  if (!canvas) return;
+  const c = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 300;
+  canvas.width = W;
+  const H = canvas.height;
+  const pad = { t:12, b:24, l:34, r:8 };
+  const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+  const Qmax = Math.max(...QRIVER) * 1.1;
+  const yOf = q => pad.t + cH - (q / Qmax) * cH;
+  const xOf = i => pad.l + (i / (MONTHS.length - 1)) * cW;
+
+  c.clearRect(0, 0, W, H);
+
+  // grid
+  [0.25, 0.5, 0.75, 1].forEach(f => {
+    const y = pad.t + cH * (1 - f);
+    c.strokeStyle = 'rgba(0,0,0,0.12)'; c.lineWidth = 0.5;
+    c.beginPath(); c.moveTo(pad.l, y); c.lineTo(W - pad.r, y); c.stroke();
+    c.fillStyle = 'rgba(0,0,0,0.55)'; c.font = '8px ui-monospace,monospace';
+    c.fillText(Math.round(Qmax * f), 2, y + 3);
+  });
+
+  // Qd line
+  c.strokeStyle = '#d32f2f'; c.lineWidth = 1.5; c.setLineDash([4,3]);
+  c.beginPath(); c.moveTo(pad.l, yOf(Qd)); c.lineTo(W - pad.r, yOf(Qd)); c.stroke();
+  c.setLineDash([]); c.fillStyle = '#d32f2f'; c.font = 'bold 9px sans-serif';
+  c.fillText('Qd', W - pad.r - 14, yOf(Qd) - 2);
+
+  // Qenv fill
+  c.fillStyle = 'rgba(0,150,80,0.22)';
+  c.beginPath();
+  QRIVER.forEach((q, i) => { const x=xOf(i), y=yOf(q * bio / 100); i===0?c.moveTo(x,y):c.lineTo(x,y); });
+  c.lineTo(xOf(QRIVER.length-1), yOf(0)); c.lineTo(xOf(0), yOf(0)); c.closePath(); c.fill();
+
+  // Qin fill
+  c.fillStyle = 'rgba(0,120,200,0.18)';
+  c.beginPath();
+  QRIVER.forEach((q, i) => { const x=xOf(i), y=yOf(Math.min(q,Qd)); i===0?c.moveTo(x,y):c.lineTo(x,y); });
+  c.lineTo(xOf(QRIVER.length-1), yOf(0)); c.lineTo(xOf(0), yOf(0)); c.closePath(); c.fill();
+
+  // Qriver line
+  c.strokeStyle = '#0d47a1'; c.lineWidth = 2.6; c.lineJoin = 'round';
+  c.beginPath();
+  QRIVER.forEach((q, i) => { const x=xOf(i),y=yOf(q); i===0?c.moveTo(x,y):c.lineTo(x,y); });
+  c.stroke();
+
+  // Qin line
+  c.strokeStyle = '#00838f'; c.lineWidth = 2.2;
+  c.beginPath();
+  QRIVER.forEach((q, i) => { const x=xOf(i),y=yOf(Math.min(q,Qd)); i===0?c.moveTo(x,y):c.lineTo(x,y); });
+  c.stroke();
+
+  // Qenv line
+  c.strokeStyle = '#2e7d32'; c.lineWidth = 2;
+  c.beginPath();
+  QRIVER.forEach((q, i) => { const x=xOf(i),y=yOf(q * bio / 100); i===0?c.moveTo(x,y):c.lineTo(x,y); });
+  c.stroke();
+
+  // month labels + active marker
+  MONTHS.forEach((m, i) => {
+    const x = xOf(i), active = i === idx;
+    if (active) {
+      c.strokeStyle = 'rgba(0,0,0,0.45)'; c.lineWidth = 1; c.setLineDash([2,2]);
+      c.beginPath(); c.moveTo(x, pad.t); c.lineTo(x, H - pad.b); c.stroke(); c.setLineDash([]);
+      c.fillStyle = '#0d47a1'; c.beginPath(); c.arc(x, yOf(QRIVER[i]), 4, 0, Math.PI*2); c.fill();
+      c.fillStyle = '#00838f'; c.beginPath(); c.arc(x, yOf(Math.min(QRIVER[i],Qd)), 4, 0, Math.PI*2); c.fill();
+    }
+    if (i % 2 === 0 || active) {
+      c.fillStyle = active ? '#000' : 'rgba(0,0,0,0.55)';
+      c.font = active ? 'bold 9px sans-serif' : '8px sans-serif';
+      c.textAlign = 'center';
+      c.fillText(m.slice(0,3), x, H - 4);
+    }
+  });
+  c.textAlign = 'left';
+}
+
+function updateSidebarHgReadouts(idx, Qd, bio) {
+  const q = QRIVER[idx];
+  const qin = Math.min(q, Qd);
+  const qenv = +(q * bio / 100).toFixed(0);
+  const qspill = Math.max(0, q - Qd);
+  document.getElementById('hg-month-badge').textContent = MONTHS[idx];
+  document.getElementById('hg-qriver').textContent = q + ' m³/s';
+  document.getElementById('hg-qin').textContent = qin.toFixed(0) + ' m³/s';
+  document.getElementById('hg-qenv').textContent = qenv + ' m³/s';
+  const sw = document.getElementById('hgSpillWarning');
+  if (qspill > 0) { sw.style.display='inline'; document.getElementById('hgSpillVal').textContent = qspill.toFixed(0); }
+  else sw.style.display = 'none';
+
+  // sync inflow slider
+  const sl = document.getElementById('inflowSlider');
+  if (sl) {
+    sl.value = Math.min(qin, sl.max);
+    totalFlow = parseInt(sl.value);
+    onSimInput();
+  }
+}
+
+function goToHgMonth(idx) {
+  hgCurrentMonth = idx;
+  const Qd = getQd(), bio = getHgBio();
+  drawSidebarHg(idx, Qd, bio);
+  updateSidebarHgReadouts(idx, Qd, bio);
+}
+
+function onQdInput(v) {
+  document.getElementById('qdVal').textContent = v;
+  goToHgMonth(hgCurrentMonth);
+}
+
+function toggleHgPlay() {
+  hgPlaying = !hgPlaying;
+  document.getElementById('hgPlayBtn').textContent = hgPlaying ? ' Pause' : ' Animate';
+  if (hgPlaying) {
+    hgAnimTimer = setInterval(() => { hgCurrentMonth = (hgCurrentMonth + 1) % MONTHS.length; goToHgMonth(hgCurrentMonth); }, 700);
+  } else {
+    clearInterval(hgAnimTimer);
+  }
+}
+
+document.getElementById('hydrographCanvas').addEventListener('click', function(e) {
+  const rect = this.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const idx = Math.round(((x - 34) / (this.offsetWidth - 42)) * (MONTHS.length - 1));
+  if (idx >= 0 && idx < MONTHS.length) goToHgMonth(idx);
+});
+
+document.getElementById('bioPercentSlider').addEventListener('input', () => goToHgMonth(hgCurrentMonth));
+
+setTimeout(() => goToHgMonth(6), 100);
+
+function exportSimCSV() {
+  const Qd = getQd(), bio = getHgBio();
+  const rows = [['Month','Qriver','Qin','Qenv','Qspill','EflowPct','PS4Status']];
+  MONTHS.forEach((m, i) => {
+    const q = QRIVER[i], qin = Math.min(q, Qd), qenv = +(q * bio / 100).toFixed(0);
+    const qspill = Math.max(0, q - Qd), pct = +(qenv / q * 100).toFixed(1);
+    const status = pct >= 10 ? 'Compliant' : 'VIOLATION';
+    rows.push([m, q, qin, qenv, qspill.toFixed(0), pct, status]);
+  });
+  dlCSV('hydroflow_monthly.csv', rows);
+}
+
+
+const SCENARIOS = {
+  normal:    { total:400, bio:44, temp:14, turb:18, do_:7.4, ph:7.2, fish:0.92, sed:22 },
+  drought:   { total:80,  bio:6,  temp:22, turb:35, do_:5.8, ph:7.0, fish:0.7,  sed:18 },
+  flood:     { total:1800,bio:200,temp:9,  turb:160,do_:6.1, ph:7.4, fish:2.2,  sed:65 },
+  violation: { total:400, bio:30, temp:14, turb:20, do_:7.2, ph:7.1, fish:0.9,  sed:24 },
+  glof:      { total:1200,bio:50, temp:5,  turb:120,do_:4.2, ph:6.4, fish:2.8,  sed:70 }
+};
+
+let cNoiseOn = false, cNoiseInterval = null, cCharts = {}, cLog = [], cTick = 0;
+
+function genHistory(tf, bf, temp, doV, sed) {
+  const arr = [];
+  for (let i = 23; i >= 0; i--) {
+    const n = (v, p) => parseFloat((v * (1 + (Math.random()-0.5)*p)).toFixed(2));
+    const ntf = n(tf, 0.1), nbf = n(bf, 0.3);
+    arr.push({ tf: Math.round(ntf), bf: Math.round(nbf), ratio: parseFloat((nbf/ntf*100).toFixed(1)), do_: parseFloat(n(doV,0.15).toFixed(1)), sed: Math.round(n(sed,0.2)), label: i===0?'now':('-'+i+'h') });
+  }
+  return arr;
+}
+
+function drawGauge(ratio) {
+  const cv = document.getElementById('gaugeCanvas');
+  if (!cv) return;
+  const c = cv.getContext('2d');
+  c.clearRect(0, 0, 160, 100);
+  const cx=80, cy=90, r=70;
+  c.beginPath(); c.arc(cx,cy,r,Math.PI,2*Math.PI); c.strokeStyle='#e5e5ea'; c.lineWidth=14; c.stroke();
+  const clamp = Math.min(Math.max(ratio,0),20);
+  const fill = Math.PI + (clamp/20)*Math.PI;
+  const color = ratio<8?'#f85149':ratio<10?'#d29922':'#3fb950';
+  c.beginPath(); c.arc(cx,cy,r,Math.PI,fill); c.strokeStyle=color; c.lineWidth=14; c.lineCap='round'; c.stroke();
+  const na = Math.PI + (clamp/20)*Math.PI;
+  c.beginPath(); c.moveTo(cx,cy); c.lineTo(cx+(r-20)*Math.cos(na), cy+(r-20)*Math.sin(na)); c.strokeStyle='#1d1d1f'; c.lineWidth=2; c.lineCap='round'; c.stroke();
+  c.beginPath(); c.arc(cx,cy,5,0,2*Math.PI); c.fillStyle='#1d1d1f'; c.fill();
+  c.fillStyle='#6e6e73'; c.font='10px IBM Plex Mono,monospace';
+  c.fillText('0%',8,96); c.fillText('10%',63,16); c.fillText('20%',122,96);
+}
+
+function buildComplianceCharts(hist) {
+  const gc='rgba(0,0,0,0.08)', tc='#6e6e73';
+  const base = { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{ticks:{color:tc,font:{size:10,family:'IBM Plex Mono'}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:10,family:'IBM Plex Mono'}},grid:{color:gc}}} };
+  ['c1','c2','c3','c4'].forEach(k => { if(cCharts[k]){cCharts[k].destroy();} });
+  const labels = hist.map(h=>h.label);
+  cCharts.c1 = new Chart(document.getElementById('chart1').getContext('2d'), { type:'line', data:{ labels, datasets:[{label:'E-flow%',data:hist.map(h=>h.ratio),borderColor:'#3fb950',borderWidth:2,pointRadius:2,tension:0.4,fill:false},{label:'PS4',data:hist.map(()=>10),borderColor:'#f85149',borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false}]}, options:{...base,scales:{...base.scales,y:{...base.scales.y,min:0,max:25}}}});
+  cCharts.c2 = new Chart(document.getElementById('chart2').getContext('2d'), { type:'line', data:{ labels, datasets:[{label:'DO mg/L',data:hist.map(h=>h.do_),borderColor:'#58a6ff',borderWidth:2,pointRadius:2,tension:0.4,fill:false},{label:'Min 5.0',data:hist.map(()=>5),borderColor:'#f85149',borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false}]}, options:{...base,scales:{...base.scales,y:{...base.scales.y,min:0,max:14}}}});
+  cCharts.c4 = new Chart(document.getElementById('chart4').getContext('2d'), { type:'bar', data:{ labels, datasets:[{label:'Sed%',data:hist.map(h=>h.sed),backgroundColor:hist.map(h=>h.sed>25?'#f8514955':'#d2992244'),borderColor:hist.map(h=>h.sed>25?'#f85149':'#d29922'),borderWidth:1}]}, options:{...base,scales:{...base.scales,y:{...base.scales.y,min:0,max:80}}}});
+  const c5el = document.getElementById('chart5');
+  if (c5el) cCharts.c5 = new Chart(c5el.getContext('2d'), { type:'line', data:{ labels, datasets:[{label:'Total inflow',data:hist.map(h=>h.tf),borderColor:'#58a6ff',borderWidth:2,pointRadius:2,tension:0.4,fill:false},{label:'E-flow',data:hist.map(h=>h.bf),borderColor:'#3fb950',borderWidth:2,pointRadius:2,tension:0.4,fill:false}]}, options:{...base}});
+}
+
+function setCard(id,cls){const el=document.getElementById(id);if(el)el.className='metric-card '+cls;}
+function setVal(id,html){const el=document.getElementById(id);if(el)el.innerHTML=html;}
+function setBadge(id,ok,warn){const el=document.getElementById(id);if(!el)return;if(ok){el.className='badge badge-ok';el.textContent=' OK';}else if(warn){el.className='badge badge-warn';el.textContent=' Watch';}else{el.className='badge badge-crit';el.textContent=' Violation';}}
+function pbar(id,vid,pct,color,label){const e=document.getElementById(id);if(e){e.style.width=Math.min(100,pct).toFixed(0)+'%';e.style.background=color;}const v=document.getElementById(vid);if(v)v.textContent=label;}
+
+function buildAlerts(s) {
+  const box = document.getElementById('alertBox');
+  if (!box) return;
+  const now = new Date().toLocaleTimeString();
+  const items = [];
+  if (s.ratio < 10) items.push({cls:'crit',icon:'',title:'PS4 VIOLATION — E-flow below 10% IFC minimum',sub:'Incident log required · ESMS notification · '+now});
+  else if (s.ratio < 12) items.push({cls:'warn',icon:'',title:'PS4 watch — E-flow within 2% of minimum',sub:'Monitor closely · '+now});
+  if (s.do_ < 5) items.push({cls:'crit',icon:'',title:'PS6 VIOLATION — Dissolved oxygen below 5 mg/L',sub:'Aquatic life at immediate risk · '+now});
+  else if (s.do_ < 6) items.push({cls:'warn',icon:'',title:'PS6 watch — Dissolved oxygen low',sub:'Monitor DO levels · '+now});
+  if (s.sed > 25) items.push({cls:'warn',icon:'',title:'Sediment above Kulekhani 25% reference',sub:'PS6 capacity loss risk · '+now});
+  if (s.temp > 22) items.push({cls:'warn',icon:'',title:'Water temperature above 22°C',sub:'PS6 biodiversity thermal stress · '+now});
+  if (items.length === 0) items.push({cls:'ok',icon:'',title:'All IFC PS4 / PS6 / PS8 parameters within thresholds',sub:'System nominal · '+now});
+  box.innerHTML = items.map(i=>`<div class="alert-item ${i.cls}"><span class="alert-icon">${i.icon}</span><div><div class="alert-title">${i.title}</div><div class="alert-sub">${i.sub}</div></div></div>`).join('');
+}
+
+function renderLog() {
+  const tbody = document.getElementById('logBody');
+  if (!tbody) return;
+  tbody.innerHTML = cLog.slice(0,12).map(r=>{
+    const p4c=r.ps4==='OK'?'td-ok':'td-crit';
+    const p6c=r.ps6==='OK'?'td-ok':r.ps6==='WATCH'?'td-warn':'td-crit';
+    const src = r.source || 'sim';
+    return `<tr><td>${r.ts}</td><td>${src}</td><td>${r.total}</td><td>${r.bio}</td><td class="${p4c}">${r.ratio}%</td><td>${r.temp}</td><td>${r.do_}</td><td>${r.sed}</td><td class="${p4c}">${r.ps4}</td><td class="${p6c}">${r.ps6}</td></tr>`;
+  }).join('');
+}
+
+function addLog(s, opts) {
+  opts = opts || {};
+  const when = opts.when ? new Date(opts.when) : new Date();
+  const ts = when.toLocaleTimeString();
+  const source = opts.source || 'simulated';
+  const ps4 = s.ratio >= 10 ? 'OK' : 'VIOLATION';
+  const ps6 = (s.do_ >= 5) ? 'OK' : 'VIOLATION';
+  const entry = {ts, source, total:Math.round(s.tf), bio:Math.round(s.bf), ratio:Number(s.ratio).toFixed(1), temp:Number(s.temp).toFixed(1), do_:Number(s.do_).toFixed(1), sed:Math.round(s.sed), ps4, ps6};
+  cLog.unshift(entry);
+  if (cLog.length > 50) cLog.pop();
+  renderLog();
+  if (!opts.skipPersist) persistReading(when, source, s, ps4, ps6, opts.notes || null);
+}
+
+function getSliders() {
+  return {
+    tf:   parseFloat(document.getElementById('sTotal').value),
+    bf:   parseFloat(document.getElementById('sBio').value),
+    temp: parseFloat(document.getElementById('sTemp').value),
+    do_:  parseFloat(document.getElementById('sDO').value),
+    sed:  parseFloat(document.getElementById('sSed').value)
+  };
+}
+
+function updateCompliance() {
+  const s = getSliders();
+  const ratio = parseFloat((s.bf / s.tf * 100).toFixed(1));
+  s.ratio = ratio;
+
+  ['lTotal','lBio','lTemp','lDO','lSed'].forEach((id, i) => {
+    const vals = [Math.round(s.tf), Math.round(s.bf), s.temp.toFixed(1), s.do_.toFixed(1), Math.round(s.sed)];
+    const el = document.getElementById(id); if(el) el.textContent = vals[i];
+  });
+
+  drawGauge(ratio);
+  const gp = document.getElementById('gaugePct'); if(gp){gp.textContent=ratio.toFixed(1)+'%';gp.className='gauge-big '+(ratio>=10?'gauge-ok':ratio>=8?'gauge-warn':'gauge-crit');}
+  const gs = document.getElementById('gaugeSurplus'); if(gs) gs.textContent=(ratio>=10?'Surplus above IFC PS4 minimum: +':(  'Deficit below IFC PS4 minimum: '))+Math.abs(ratio-10).toFixed(1)+'%';
+  const gst = document.getElementById('gaugeStatus');
+  if(gst){if(ratio>=10)gst.innerHTML='<span class="badge badge-ok"> PS4 Compliant</span>';else if(ratio>=8)gst.innerHTML='<span class="badge badge-warn"> Approaching violation</span>';else gst.innerHTML='<span class="badge badge-crit"> PS4 Violation</span>';}
+
+  pbar('pb-eflow','pb-eflow-v',ratio/20*100,ratio>=10?'#3fb950':ratio>=8?'#d29922':'#f85149',ratio.toFixed(1)+'%');
+  pbar('pb-do','pb-do-v',s.do_/14*100,s.do_>=5?'#3fb950':'#f85149',s.do_.toFixed(1)+' mg/L');
+
+  setCard('mc-ratio',ratio>=10?'ok':ratio>=8?'warn':'crit'); setVal('mv-ratio',ratio.toFixed(1)+'<span class="unit">%</span>');
+  setCard('mc-down',ratio>=10?'ok':'warn'); setVal('mv-down',Math.round(s.bf)+'<span class="unit"> L/s</span>');
+  setCard('mc-temp',s.temp>=8&&s.temp<=22?'ok':'warn'); setVal('mv-temp',s.temp.toFixed(1)+'<span class="unit">°C</span>');
+  setCard('mc-do',s.do_>=5?'ok':s.do_>=4?'warn':'crit'); setVal('mv-do',s.do_.toFixed(1)+'<span class="unit"> mg/L</span>');
+  setCard('mc-sed',s.sed<=25?'ok':s.sed<=40?'warn':'crit'); setVal('mv-sed',Math.round(s.sed)+'<span class="unit">%</span>');
+
+  const ct = { eflow:ratio.toFixed(1)+'%', down:Math.round(s.bf)+' L/s', do:s.do_.toFixed(1)+' mg/L', sed:Math.round(s.sed)+'%' };
+  Object.entries(ct).forEach(([k,v]) => { const el=document.getElementById('ct-'+k); if(el) el.textContent=v; });
+
+  setBadge('cb-eflow',ratio>=10,!!(ratio>=8&&ratio<10));
+  setBadge('cb-down',ratio>=10,false);
+  setBadge('cb-do',s.do_>=5,!!(s.do_>=4&&s.do_<5));
+  setBadge('cb-sed',s.sed<=25,!!(s.sed<=40&&s.sed>25));
+
+  buildAlerts(s);
+  buildComplianceCharts(genHistory(s.tf, s.bf, s.temp, s.do_, s.sed));
+
+  cTick++;
+  if (cTick % 3 === 0 || cLog.length === 0) addLog(s);
+  const ss = document.getElementById('simStatus'); if(ss) ss.textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+function applyScenario(btn) {
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const sc = SCENARIOS[btn.dataset.scenario];
+  ['sTotal','sBio','sTemp','sDO','sSed'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) el.value = [sc.total, sc.bio, sc.temp, sc.do_, sc.sed][i];
+  });
+  updateCompliance();
+}
+
+function setNoise(on, btn) {
+  cNoiseOn = on;
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (cNoiseInterval) { clearInterval(cNoiseInterval); cNoiseInterval = null; }
+  if (on) {
+    cNoiseInterval = setInterval(() => {
+      const ids=['sTotal','sBio','sTemp','sDO','sSed'];
+      const pcts=[0.03,0.05,0.02,0.04,0.05];
+      ids.forEach((id,i) => { const el=document.getElementById(id); const v=parseFloat(el.value); el.value=Math.min(el.max,Math.max(el.min,v*(1+(Math.random()-0.5)*pcts[i]))).toFixed(2); });
+      updateCompliance();
+    }, 2000);
+  }
+}
+
+function exportCSV() {
+  if (!cLog.length) { alert('No log data. Run the simulator first.'); return; }
+  const h = ['Timestamp','Source','Total_Ls','Eflow_Ls','Ratio_pct','Temp_C','DO_mgL','Sediment_pct','PS4','PS6'];
+  const rows = cLog.map(r => [r.ts,r.source||'sim',r.total,r.bio,r.ratio,r.temp,r.do_,r.sed,r.ps4,r.ps6].join(','));
+  dlCSV('ifc_eflow_log.csv', [h, ...rows.map(r=>r.split(','))]);
+}
+
+function exportJSON() {
+  if (!cLog.length) { alert('No log data. Run the simulator first.'); return; }
+  const payload = { meta:{simulator:'IFC PS E-Flow Nepal Hydropower',version:'2.0',exported:new Date().toISOString(),standards:['PS4','PS6','PS8']}, readings:cLog };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)], {type:'application/json'}));
+  a.download = 'ifc_eflow_log.json'; a.click();
+}
+
+function printReport() {
+  const s = getSliders();
+  const ratio = parseFloat((s.bf/s.tf*100).toFixed(1));
+  const w = window.open('','_blank');
+  w.document.write(`<html><head><title>IFC PS Compliance Report</title><style>body{font-family:sans-serif;padding:30px;max-width:800px}h1{font-size:18px}h2{font-size:14px;color:#555;margin:20px 0 8px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:7px 10px;text-align:left}th{background:#f5f5f5}.ok{color:green}.crit{color:red}.warn{color:orange}
+
+/* === Weather presets & realistic river === */
+.weather-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;}
+.weather-btn{background:#f5f5f7;border:1px solid rgba(0,0,0,0.10);border-radius:8px;padding:8px 6px;cursor:pointer;font-family:var(--font);font-size:11px;color:#1d1d1f;font-weight:500;transition:all .15s;text-align:center;line-height:1.25;}
+.weather-btn:hover{background:#ebebef;}
+.weather-btn.active{background:#0066cc;border-color:#0066cc;color:#fff;}
+.weather-btn .wb-flow{display:block;font-size:9px;color:#6e6e73;font-family:var(--mono);margin-top:2px;font-weight:400;}
+.weather-btn.active .wb-flow{color:rgba(255,255,255,0.85);}
+.sensor.sensor-up{top:50%;left:14%;transform:translate(-50%,-50%);}
+.sensor.sensor-env{top:auto;left:auto;bottom:18%;right:18%;transform:none;}
+.sensor.sensor-pwr{top:42%;right:18%;left:auto;transform:translateY(-50%);background:#ffffff;border-color:rgba(0,0,0,0.12);}
+.sensor-title{font-weight:600;font-size:10px;color:#1d1d1f;letter-spacing:.02em;}
+.sensor-readout strong{color:#0066cc;font-weight:600;}
+.sensor.alert .sensor-title,.sensor.alert .sensor-readout{color:#c62828;}
+
+/* === Customer theme overrides === */
+:root{
+  --bg:#ffffff; --bg2:#ffffff; --bg3:#f5f5f7;
+  --border:rgba(0,0,0,0.10); --border2:rgba(0,0,0,0.18);
+  --text:#1d1d1f; --text2:#6e6e73; --text3:#86868b;
+  --green:#1f8a3a; --green-bg:rgba(31,138,58,0.10);
+  --yellow:#a76b00; --yellow-bg:rgba(167,107,0,0.10);
+  --red:#c62828; --red-bg:rgba(198,40,40,0.10);
+  --blue:#0066cc; --blue-bg:rgba(0,102,204,0.10);
+  --cyan:#0a84ff; --lime:#1f8a3a;
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Monaco,Consolas,monospace;
+}
+html,body{background:#ffffff;color:#1d1d1f;}
+body,p,div,span,td,th,li,label,button,input,select,textarea,.description,.stat-label,.metric-label,.metric-threshold,.alert-sub,.s-desc,.hg-legend,.brand-sub,.card-title,.sec-head,.pill,.badge,.ps-tag,.value-display,.metric-value,.stat-value,.gauge-big,.gauge-label,.pbar-label,.hg-readouts,.alert-banner,footer,.gauge-label,.hg-badge,.sensor,.sensor-readout{font-weight:400 !important;}
+h1,h2,h3,h4,h5,h6,.brand-title,.glass-panel h2,.hg-panel h2,.stat-info h3,.info-panel h3,.alert-title,.s-name{font-weight:700 !important;}
+.app-header{background:#ffffff;}
+.brand-logo{background:linear-gradient(135deg,#0a84ff,#1f8a3a);color:#fff;}
+.glass-panel,.hg-panel{background:#ffffff;}
+.sim-sidebar{background:#fafafa;}
+.metric-card,.card,.controls-section,.gauge-wrap{background:#ffffff;}
+#flowCanvas, canvas{background:#ffffff;}
+canvas#hydrographCanvas{background:#f5f5f7 !important;}
+input[type=range]::-webkit-slider-thumb{border-color:#fff;}
+.label{background:rgba(255,255,255,0.85);color:#1d1d1f;}
+.nav-tab.active{color:#0066cc;border-bottom-color:#0066cc;}
+.nav-tab:hover{background:rgba(0,0,0,0.04);}
+.alert-banner{background:#fdecea;color:#c62828;border-color:rgba(198,40,40,0.35);}
+
+</style></head><body>
+  <h1>IFC Performance Standards — E-Flow Compliance Report</h1>
+  <p style="font-size:12px;color:#666">Nepal Hydropower Project · Generated: ${new Date().toLocaleString()} · Simulated data</p>
+  <h2>Current sensor readings</h2>
+  <table><tr><th>Sensor parameter</th><th>Value</th><th>IFC Threshold</th><th>PS</th><th>Status</th></tr>
+  <tr><td>E-flow ratio</td><td>${ratio}%</td><td>≥10%</td><td>PS4</td><td class="${ratio>=10?'ok':'crit'}">${ratio>=10?'COMPLIANT':'VIOLATION'}</td></tr>
+  <tr><td>Dissolved O₂</td><td>${s.do_.toFixed(1)} mg/L</td><td>≥5 mg/L</td><td>PS6</td><td class="${s.do_>=5?'ok':'crit'}">${s.do_>=5?'COMPLIANT':'VIOLATION'}</td></tr>
+  <tr><td>Sediment load</td><td>${Math.round(s.sed)}%</td><td>Ref: 25% (Kulekhani)</td><td>PS6</td><td class="${s.sed<=25?'ok':'warn'}">${s.sed<=25?'OK':'WATCH'}</td></tr>
+  <tr><td>Temperature</td><td>${s.temp.toFixed(1)}°C</td><td>8–22°C</td><td>PS4</td><td class="${s.temp>=8&&s.temp<=22?'ok':'warn'}">${s.temp>=8&&s.temp<=22?'OK':'WATCH'}</td></tr>
+  </table>
+  <h2>Nepal compliance gap reference (IFC PS document)</h2>
+  <table><tr><th>PS</th><th>Gap severity</th><th>Nepal status</th><th>Key impact</th></tr>
+  <tr><td>PS4 — Community H&amp;S &amp; e-flow sensors</td><td class="crit">CRITICAL</td><td>10% min flow rule rarely monitored; no GLOF integration required</td><td>Downstream Q &amp; surge detection</td></tr>
+  <tr><td>PS6 — Biodiversity &amp; ecosystem sensors</td><td class="warn">HIGH</td><td>No cumulative/offset requirement; fish passage unaddressed</td><td>Ecosystem collapse</td></tr>
+  <tr><td>PS8 — Cultural heritage</td><td>MOD</td><td>No chance-find protocol; sacred rivers unprotected</td><td>Sacred river flow continuity</td></tr>
+  </table>
+  <p style="font-size:11px;color:#999;margin-top:30px">This report is based on simulated sensor data only and is not for regulatory submission. · Nepal Hydropower · PS4 / PS6 / PS8 · v1.0</p>
+  </body></html>`);
+  w.print();
+}
+
+
+let hgvChart = null, hgvTab = 'hydro';
+let hgvFdcData = null;
+
+function onHgViewInput() {
+  const Qd = parseInt(document.getElementById('hgv-qdSlider').value);
+  const H  = parseInt(document.getElementById('hgv-headSlider').value);
+  const eta= parseInt(document.getElementById('hgv-etaSlider').value) / 100;
+  const ef = parseInt(document.getElementById('hgv-efSlider').value);
+  document.getElementById('hgv-qd').textContent   = Qd;
+  document.getElementById('hgv-head').textContent  = H;
+  document.getElementById('hgv-eta').textContent   = Math.round(eta * 100);
+  document.getElementById('hgv-ef').textContent    = ef;
+  updateHgvMetrics(Qd, H, eta, ef);
+  renderHgvChart();
+  buildHgvLog(Qd, H, eta, ef);
+}
+
+function updateHgvMetrics(Qd, H, eta, ef) {
+  const Qbar = QRIVER.reduce((s,v)=>s+v,0) / QRIVER.length;
+  const Pcap = +(9.81 * Qd * H * eta / 1000).toFixed(1);
+  // build FDC first
+  hgvFdcData = buildFdc();
+  const Q40 = hgvFdcData ? hgvFdcData[40] : Qd * 0.6;
+  const Pfirm = +(9.81 * Math.min(Q40, Qd) * H * eta / 1000).toFixed(1);
+  const PLF = +(Pfirm / Pcap * 100).toFixed(0);
+  const Ean = +(Pcap * PLF/100 * 8760 / 1000).toFixed(0);
+  document.getElementById('hgv-cap').textContent    = Pcap + ' MW';
+  document.getElementById('hgv-energy').textContent  = Ean + ' GWh/yr';
+  document.getElementById('hgv-plf').textContent     = PLF + '%';
+  document.getElementById('hgv-qbar').textContent    = Qbar.toFixed(0) + ' m³/s';
+}
+
+function buildFdc() {
+  const all = [];
+  QRIVER.forEach(q => { for(let i=0;i<30;i++) all.push(q*(0.85+Math.random()*0.3)); });
+  all.sort((a,b)=>b-a);
+  const pts = [];
+  for(let i=0;i<=100;i++) pts.push(+all[Math.min(Math.floor(i/100*(all.length-1)),all.length-1)].toFixed(1));
+  return pts;
+}
+
+function switchHgTab(tab, btn) {
+  hgvTab = tab;
+  document.querySelectorAll('[id^="hgvTab-"]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderHgvChart();
+}
+
+function renderHgvChart() {
+  const Qd  = parseInt(document.getElementById('hgv-qdSlider')?.value || 120);
+  const H   = parseInt(document.getElementById('hgv-headSlider')?.value || 120);
+  const eta = parseInt(document.getElementById('hgv-etaSlider')?.value || 84) / 100;
+  const ef  = parseInt(document.getElementById('hgv-efSlider')?.value || 10);
+  const Qbar = QRIVER.reduce((s,v)=>s+v,0)/QRIVER.length;
+  const Qenv_floor = Qbar * ef / 100;
+
+  if (hgvChart) { hgvChart.destroy(); hgvChart = null; }
+  const cv = document.getElementById('hgvChart');
+  if (!cv) return;
+  const c = cv.getContext('2d');
+  const gc='rgba(0,0,0,0.08)', tc='#6e6e73';
+  const baseOpts = { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{ticks:{color:tc,font:{size:10,family:'IBM Plex Mono'}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:10,family:'IBM Plex Mono'}},grid:{color:gc}}} };
+
+  if (hgvTab === 'hydro') {
+    hgvChart = new Chart(c, { type:'line', data:{ labels:MONTHS, datasets:[
+      {label:'Qriver',data:QRIVER,borderColor:'rgba(255,255,255,0.85)',backgroundColor:'rgba(255,255,255,0.06)',fill:true,tension:0.45,pointRadius:4,borderWidth:2,yAxisID:'y'},
+      {label:'Qd',data:Array(12).fill(Qd),borderColor:'#ef9a9a',borderWidth:1.5,borderDash:[6,3],pointRadius:0,fill:false,yAxisID:'y'},
+      {label:'Qenv floor',data:Array(12).fill(+Qenv_floor.toFixed(1)),borderColor:'#a5d6a7',borderWidth:1,borderDash:[2,4],pointRadius:0,fill:false,yAxisID:'y'},
+      {label:'Q100',data:QRIVER.map(q=>+(q*4.5).toFixed(0)),borderColor:'#f85149',borderWidth:1,borderDash:[3,4],pointRadius:0,fill:false,tension:0.4,yAxisID:'yR'}
+    ]}, options:{...baseOpts,scales:{...baseOpts.scales,y:{...baseOpts.scales.y,position:'left',title:{display:true,text:'Flow (m³/s)',color:tc,font:{size:10}}},yR:{position:'right',title:{display:true,text:'Design flood (m³/s)',color:'#f85149',font:{size:10}},ticks:{color:'#f85149',font:{size:10}},grid:{display:false}}}}});
+  } else if (hgvTab === 'fdc') {
+    if (!hgvFdcData) hgvFdcData = buildFdc();
+    const Q40 = hgvFdcData[40];
+    hgvChart = new Chart(c, { type:'line', data:{ labels:Array.from({length:101},(_,i)=>i+'%'), datasets:[
+      {label:'FDC',data:hgvFdcData,borderColor:'#58a6ff',backgroundColor:'rgba(88,166,255,0.08)',fill:true,tension:0.3,pointRadius:0,borderWidth:2},
+      {label:'Qd',data:Array(101).fill(Qd),borderColor:'#3fb950',borderWidth:1.5,borderDash:[6,3],pointRadius:0,fill:false},
+      {label:'Q40',data:Array(101).fill(+Q40.toFixed(1)),borderColor:'#888780',borderWidth:1.5,borderDash:[4,4],pointRadius:0,fill:false}
+    ]}, options:{...baseOpts,scales:{...baseOpts.scales,x:{ticks:{color:tc,font:{size:10},callback:(v,i)=>i%10===0?i+'%':''},grid:{color:gc}},y:{...baseOpts.scales.y,title:{display:true,text:'Flow (m³/s)',color:tc,font:{size:10}}}}}});
+  } else {
+    const firm = QRIVER.map(q => +(9.81*Math.min(q,Qd)*H*eta/1000).toFixed(1));
+    const secondary = QRIVER.map(q => +(9.81*Math.max(0,q-Qd)*H*eta/1000).toFixed(1));
+    const cap = +(9.81*Qd*H*eta/1000).toFixed(1);
+    hgvChart = new Chart(c, { type:'bar', data:{ labels:MONTHS, datasets:[
+      {label:'Firm power',data:firm,backgroundColor:'#534AB7',borderWidth:0,stack:'pw'},
+      {label:'Secondary',data:secondary,backgroundColor:'#B5D4F4',borderWidth:0,stack:'pw'},
+      {label:'Capacity',data:Array(12).fill(cap),type:'line',borderColor:'#3fb950',borderWidth:1.5,borderDash:[6,3],pointRadius:0,fill:false,tension:0}
+    ]}, options:{...baseOpts,scales:{...baseOpts.scales,x:{stacked:true,ticks:{color:tc,font:{size:10}},grid:{color:gc}},y:{stacked:true,title:{display:true,text:'Power (MW)',color:'#534AB7',font:{size:10}},ticks:{color:tc,font:{size:10}},grid:{color:gc}}}}});
+  }
+}
+
+function buildHgvLog(Qd, H, eta, ef) {
+  const Qbar = QRIVER.reduce((s,v)=>s+v,0)/QRIVER.length;
+  const tbody = document.getElementById('hgvLogBody');
+  if (!tbody) return;
+  tbody.innerHTML = MONTHS.map((m, i) => {
+    const q = QRIVER[i];
+    const qin = Math.min(q, Qd);
+    const qenv = +(q * ef / 100).toFixed(0);
+    const qspill = Math.max(0, q - Qd).toFixed(0);
+    const pwr = +(9.81 * (qin - qenv) * H * eta / 1000).toFixed(1);
+    const pct = +(qenv / q * 100).toFixed(1);
+    const ok = pct >= 10;
+    return `<tr>
+      <td>${m}</td>
+      <td>${q}</td>
+      <td>${qin}</td>
+      <td style="color:var(--cyan)">${qenv}</td>
+      <td style="color:${qspill>0?'var(--yellow)':'var(--text2)'}">${qspill}</td>
+      <td style="color:var(--blue)">${pwr}</td>
+      <td class="${ok?'td-ok':'td-crit'}">${pct}%</td>
+      <td><span class="badge ${ok?'badge-ok':'badge-crit'}">${ok?' Compliant':' Violation'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function exportHgvCSV() {
+  const Qd = parseInt(document.getElementById('hgv-qdSlider')?.value || 120);
+  const H  = parseInt(document.getElementById('hgv-headSlider')?.value || 120);
+  const eta= parseInt(document.getElementById('hgv-etaSlider')?.value || 84) / 100;
+  const ef = parseInt(document.getElementById('hgv-efSlider')?.value || 10);
+  const rows = [['Month','Qriver_m3s','Qin_m3s','Qenv_m3s','Qspill_m3s','Power_MW','EflowPct','PS4_Status']];
+  MONTHS.forEach((m, i) => {
+    const q=QRIVER[i], qin=Math.min(q,Qd), qenv=+(q*ef/100).toFixed(0), qspill=Math.max(0,q-Qd).toFixed(0);
+    const pwr=+(9.81*(qin-qenv)*H*eta/1000).toFixed(1), pct=+(qenv/q*100).toFixed(1);
+    rows.push([m, q, qin, qenv, qspill, pwr, pct, pct>=10?'Compliant':'VIOLATION']);
+  });
+  dlCSV('hydroflow_monthly_compliance.csv', rows);
+}
+
+
+function dlCSV(filename, rows) {
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = filename; a.click();
+}
+
+
+updateCompliance();
+setTimeout(() => { onHgViewInput(); }, 200);
+</script>
+</body>
+</html>

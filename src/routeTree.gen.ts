@@ -10,33 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiReadingsRouteImport } from './routes/api/readings'
+import { Route as ApiPublicSensorWebhookRouteImport } from './routes/api/public/sensor-webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiReadingsRoute = ApiReadingsRouteImport.update({
+  id: '/api/readings',
+  path: '/api/readings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSensorWebhookRoute = ApiPublicSensorWebhookRouteImport.update({
+  id: '/api/public/sensor-webhook',
+  path: '/api/public/sensor-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/readings': typeof ApiReadingsRoute
+  '/api/public/sensor-webhook': typeof ApiPublicSensorWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/readings': typeof ApiReadingsRoute
+  '/api/public/sensor-webhook': typeof ApiPublicSensorWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/readings': typeof ApiReadingsRoute
+  '/api/public/sensor-webhook': typeof ApiPublicSensorWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/api/readings' | '/api/public/sensor-webhook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/api/readings' | '/api/public/sensor-webhook'
+  id: '__root__' | '/' | '/api/readings' | '/api/public/sensor-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiReadingsRoute: typeof ApiReadingsRoute
+  ApiPublicSensorWebhookRoute: typeof ApiPublicSensorWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +68,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/readings': {
+      id: '/api/readings'
+      path: '/api/readings'
+      fullPath: '/api/readings'
+      preLoaderRoute: typeof ApiReadingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/sensor-webhook': {
+      id: '/api/public/sensor-webhook'
+      path: '/api/public/sensor-webhook'
+      fullPath: '/api/public/sensor-webhook'
+      preLoaderRoute: typeof ApiPublicSensorWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiReadingsRoute: ApiReadingsRoute,
+  ApiPublicSensorWebhookRoute: ApiPublicSensorWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
